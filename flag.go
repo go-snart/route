@@ -5,8 +5,7 @@ import (
 	"fmt"
 
 	dg "github.com/bwmarrin/discordgo"
-
-	"github.com/go-snart/snart/log"
+	"github.com/go-snart/logs"
 )
 
 // Flag holds a FlagSet for a Ctx.
@@ -28,7 +27,7 @@ func NewFlag(ctx *Ctx, name string, args []string) *Flag {
 	f.FlagSet.Usage = func() {
 		err := f.Usage().Send()
 		if err != nil {
-			log.Warn.Println(err)
+			logs.Warn.Println(err)
 		}
 	}
 

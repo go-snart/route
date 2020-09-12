@@ -4,9 +4,8 @@ import (
 	"fmt"
 
 	dg "github.com/bwmarrin/discordgo"
-
-	"github.com/go-snart/snart/db"
-	"github.com/go-snart/snart/log"
+	"github.com/go-snart/db"
+	"github.com/go-snart/logs"
 )
 
 // Okay is a function which checks if a Ctx should be used.
@@ -54,7 +53,7 @@ var GuildAdmin Okay = func(c *Ctx) bool {
 	if err != nil {
 		err = fmt.Errorf("perm: %w", err)
 
-		log.Warn.Println(err)
+		logs.Warn.Println(err)
 
 		return false
 	}
@@ -69,7 +68,7 @@ func BotAdmin(d *db.DB) Okay {
 		admins, err := d.Admins(c)
 		if err != nil {
 			err = fmt.Errorf("list admins: %w", err)
-			log.Warn.Println(err)
+			logs.Warn.Println(err)
 
 			return false
 		}
@@ -83,7 +82,7 @@ func BotAdmin(d *db.DB) Okay {
 		app, err := c.Session.Application("@me")
 		if err != nil {
 			err = fmt.Errorf("app @me: %w", err)
-			log.Warn.Println(err)
+			logs.Warn.Println(err)
 
 			return false
 		}

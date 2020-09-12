@@ -4,8 +4,7 @@ import (
 	"context"
 
 	dg "github.com/bwmarrin/discordgo"
-
-	"github.com/go-snart/snart/db"
+	"github.com/go-snart/db"
 )
 
 // Ctx holds a command context.

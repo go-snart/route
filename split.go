@@ -11,11 +11,8 @@ func Split(s string) []string {
 	args := []string(nil)
 
 	for {
-		m, err := Splitter.FindRunesMatch(subj)
-		if err != nil {
-			break
-		}
-
+		// will only error if a timeout is set (it isn't)
+		m, _ := Splitter.FindRunesMatch(subj)
 		if m == nil {
 			break
 		}

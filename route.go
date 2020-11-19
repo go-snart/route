@@ -1,32 +1,93 @@
-// Package route contains a command router for a Snart Bot.
+// Package route contains a command router for Snart.
 package route
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
-	re2 "github.com/dlclark/regexp2"
+	"github.com/diamondburned/arikawa/gateway"
+	"github.com/diamondburned/arikawa/state"
+	ff "github.com/itzg/go-flagsfiller"
+
+	"github.com/go-snart/db"
 	"github.com/go-snart/logs"
 )
 
-// Route is a command route.
+var (
+	// ErrNoCmd occurs when no command is given after a prefix.
+	ErrNoCmd = errors.New("no cmd")
+
+	// ErrNoTrigger occurs when no suitable Command is found to create a Trigger.
+	ErrNoTrigger = errors.New("no ctx found")
+)
+
+// Route handles storing and looking up routes.
 type Route struct {
-	Name  string
-	Match *re2.Regexp
-	Cat   string
-	Desc  string
-	Okay  Okay
-	Func  func(*Ctx) error
+	*db.DB
+	*state.State
+
+	Filler   *ff.FlagSetFiller
+	Commands []*Command
 }
 
-// MustMatch compiles a *re2.Regexp with sensible options for a Route.
-func MustMatch(match string) *re2.Regexp {
-	r, err := re2.Compile(match, re2.IgnoreCase)
-	if err != nil {
-		err = fmt.Errorf("re2 compile %q: %w", match, err)
-		logs.Warn.Fatalln(err)
+// New makes an empty Route from the given DB and Session.
+func New(d *db.DB, s *state.State) *Route {
+	return &Route{
+		DB:    d,
+		State: s,
 
-		return nil
+		Filler:   ff.New(),
+		Commands: nil,
+	}
+}
+
+// Add adds Commands to the Route.
+func (r *Route) Add(cmds ...*Command) {
+	r.Commands = append(r.Commands, cmds...)
+}
+
+// Handle returns a MessageCreate handler function for the Route.
+func (r *Route) Handle(m *gateway.MessageCreateEvent) {
+	logs.Debug.Println("handling")
+
+	if m.Message.Author.ID == r.State.Ready.User.ID {
+		logs.Debug.Println("ignore self")
+
+		return
 	}
 
-	return r
+	if m.Message.Author.Bot {
+		logs.Debug.Println("ignore bot")
+
+		return
+	}
+
+	lines := strings.Split(m.Message.Content, "\n")
+	logs.Debug.Printf("lines %#v", lines)
+
+	for _, line := range lines {
+		logs.Debug.Printf("line %q", line)
+
+		pfx := r.FindPrefix(m.GuildID, line)
+		if pfx == nil {
+			continue
+		}
+
+		t, err := r.Trigger(pfx, m.Message, line)
+		if err != nil {
+			err = fmt.Errorf("get ctx: %w", err)
+			logs.Warn.Println(err)
+
+			continue
+		}
+
+		err = t.Run()
+		if err != nil {
+			err = fmt.Errorf("t run: %w", err)
+			logs.Warn.Println(err)
+
+			continue
+		}
+	}
 }

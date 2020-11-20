@@ -12,7 +12,7 @@ import (
 	"github.com/go-snart/route"
 )
 
-func TestFindPrefixGuild(t *testing.T) {
+func TestLinePrefixGuild(t *testing.T) {
 	r := route.New(testDB(), nil)
 
 	const (
@@ -20,14 +20,16 @@ func TestFindPrefixGuild(t *testing.T) {
 		pfxv  = "//"
 	)
 
-	key := fmt.Sprintf("prefix_%d", guild)
-
-	err := r.DB.Set(key, pfxv)
-	if err != nil {
-		t.Errorf("db set %q %q: %s", key, pfxv, err)
+	set := route.Settings{
+		Prefix: pfxv,
 	}
 
-	pfx := r.FindPrefix(guild, pfxv)
+	err := r.SaveSettings(guild, set)
+	if err != nil {
+		t.Errorf("save set %d %v: %s", guild, set, err)
+	}
+
+	pfx := r.LinePrefix(guild, pfxv)
 	expect := &route.Prefix{
 		Value: pfxv,
 		Clean: pfxv,
@@ -38,37 +40,13 @@ func TestFindPrefixGuild(t *testing.T) {
 	}
 }
 
-func TestFindPrefixDefault(t *testing.T) {
-	r := route.New(testDB(), nil)
-
-	const (
-		pfxv = "//"
-		key  = "prefix"
-	)
-
-	err := r.DB.Set(key, pfxv)
-	if err != nil {
-		t.Errorf("db set %q %q: %s", key, pfxv, err)
-	}
-
-	pfx := r.FindPrefix(123, pfxv)
-	expect := &route.Prefix{
-		Value: pfxv,
-		Clean: pfxv,
-	}
-
-	if !reflect.DeepEqual(pfx, expect) {
-		t.Errorf("expect: %v\ngot: %v", expect, pfx)
-	}
-}
-
-func TestFindPrefixUser(t *testing.T) {
+func TestLinePrefixUser(t *testing.T) {
 	_, s := dismock.NewState(t)
 	r := route.New(testDB(), s)
 
 	me := r.State.Ready.User
 
-	pfx := r.FindPrefix(0, me.Mention())
+	pfx := r.LinePrefix(0, me.Mention())
 	expect := &route.Prefix{
 		Value: me.Mention(),
 		Clean: "@" + me.Username,
@@ -79,7 +57,7 @@ func TestFindPrefixUser(t *testing.T) {
 	}
 }
 
-func TestFindPrefixMember(t *testing.T) {
+func TestLinePrefixMember(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testDB(), s)
 
@@ -92,7 +70,7 @@ func TestFindPrefixMember(t *testing.T) {
 
 	m.Member(guild, mme)
 
-	pfx := r.FindPrefix(guild, mme.Mention())
+	pfx := r.LinePrefix(guild, mme.Mention())
 	expect := &route.Prefix{
 		Value: mme.Mention(),
 		Clean: "@" + me.Username,
@@ -105,7 +83,7 @@ func TestFindPrefixMember(t *testing.T) {
 	m.Eval()
 }
 
-func TestFindPrefixMemberNick(t *testing.T) {
+func TestLinePrefixMemberNick(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testDB(), s)
 
@@ -121,7 +99,7 @@ func TestFindPrefixMemberNick(t *testing.T) {
 
 	m.Member(guild, mme)
 
-	pfx := r.FindPrefix(guild, mme.Mention())
+	pfx := r.LinePrefix(guild, mme.Mention())
 	expect := &route.Prefix{
 		Value: mme.Mention(),
 		Clean: "@" + nick,
@@ -134,7 +112,7 @@ func TestFindPrefixMemberNick(t *testing.T) {
 	m.Eval()
 }
 
-func TestFindPrefixMemberErr(t *testing.T) {
+func TestLinePrefixMemberErr(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testDB(), s)
 
@@ -151,7 +129,7 @@ func TestFindPrefixMemberErr(t *testing.T) {
 		httputil.HTTPError{Status: 404},
 	)
 
-	pfx := r.FindPrefix(guild, mme.Mention())
+	pfx := r.LinePrefix(guild, mme.Mention())
 	expect := (*route.Prefix)(nil)
 
 	if !reflect.DeepEqual(pfx, expect) {
@@ -161,7 +139,7 @@ func TestFindPrefixMemberErr(t *testing.T) {
 	m.Eval()
 }
 
-func TestFindPrefixNil(t *testing.T) {
+func TestLinePrefixNil(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testDB(), s)
 
@@ -174,7 +152,7 @@ func TestFindPrefixNil(t *testing.T) {
 
 	m.Member(guild, mme)
 
-	pfx := r.FindPrefix(guild, "")
+	pfx := r.LinePrefix(guild, "")
 	expect := (*route.Prefix)(nil)
 
 	if !reflect.DeepEqual(pfx, expect) {

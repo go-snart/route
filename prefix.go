@@ -1,10 +1,16 @@
 package route
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/diamondburned/arikawa/discord"
+)
+
+var (
+	ErrPrefixUnset = errors.New("prefix unset")
+	ErrNoPrefix    = errors.New("no suitable prefix")
 )
 
 // Prefix is a command prefix.
@@ -15,21 +21,16 @@ type Prefix struct {
 
 // GuildPrefix finds the prefix for a given Guild.
 func (r *Route) GuildPrefix(g discord.GuildID) (*Prefix, error) {
-	key := "prefix"
-	val := ""
+	set, _ := r.LoadSettings(g)
+	// issue will propogate to ErrPrefixUnset
 
-	if g > 0 {
-		key = fmt.Sprintf("prefix_%d", g)
-	}
-
-	err := r.DB.Get(key, &val)
-	if err != nil {
-		return nil, fmt.Errorf("get %q: %w", key, err)
+	if set.Prefix == "" {
+		return nil, ErrPrefixUnset
 	}
 
 	return &Prefix{
-		Value: val,
-		Clean: val,
+		Value: set.Prefix,
+		Clean: set.Prefix,
 	}, nil
 }
 
@@ -65,30 +66,31 @@ func (r *Route) MemberPrefix(g discord.GuildID) (*Prefix, error) {
 	}, nil
 }
 
-// FindPrefix finds a suitable prefix for the line.
-// Checks guild prefix, default prefix, user mention, and member mention (in that order).
-func (r *Route) FindPrefix(g discord.GuildID, line string) *Prefix {
-	line = strings.TrimSpace(line)
-
+// FindPrefix finds the first suitable prefix, where "suitable" is defined as a truthy return from fn.
+func (r *Route) FindPrefix(g discord.GuildID, fn func(*Prefix) bool) *Prefix {
 	pfx, err := r.GuildPrefix(g)
-	if err == nil && strings.HasPrefix(line, pfx.Value) {
-		return pfx
-	}
-
-	pfx, err = r.GuildPrefix(0)
-	if err == nil && strings.HasPrefix(line, pfx.Value) {
+	if err == nil && fn(pfx) {
 		return pfx
 	}
 
 	pfx = r.UserPrefix()
-	if strings.HasPrefix(line, pfx.Value) {
+	if fn(pfx) {
 		return pfx
 	}
 
 	pfx, err = r.MemberPrefix(g)
-	if err == nil && strings.HasPrefix(line, pfx.Value) {
+	if err == nil && fn(pfx) {
 		return pfx
 	}
 
 	return nil
+}
+
+// LinePrefix finds the first suitable prefix that matches the given line.
+func (r *Route) LinePrefix(g discord.GuildID, line string) *Prefix {
+	line = strings.TrimSpace(line)
+
+	return r.FindPrefix(g, func(pfx *Prefix) bool {
+		return strings.HasPrefix(line, pfx.Value)
+	})
 }

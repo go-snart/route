@@ -24,7 +24,7 @@ func TestTrigger(t *testing.T) {
 		Clean: "//",
 	}
 
-	const line = "//cmd -run=foo"
+	const line = "//cmd `-run=foo`"
 
 	msg := discord.Message{
 		Content: line,
@@ -115,7 +115,7 @@ func TestTriggerUsage(t *testing.T) {
 
 	const (
 		channel = 1234567890
-		line    = "//cmd -help"
+		line    = "//cmd `-help`"
 	)
 
 	msg := discord.Message{
@@ -165,7 +165,7 @@ func TestTriggerUsageNoDesc(t *testing.T) {
 
 	const (
 		channel = 1234567890
-		line    = "//cmd -help"
+		line    = "//cmd `-help`"
 	)
 
 	msg := discord.Message{
@@ -214,7 +214,7 @@ func TestTriggerBadFlags(t *testing.T) {
 
 	const (
 		channel = 1234567890
-		line    = "//cmd -help"
+		line    = "//cmd `-help`"
 	)
 
 	msg := discord.Message{
@@ -279,7 +279,7 @@ func TestTriggerRun(t *testing.T) {
 	const (
 		erun    = "foo"
 		channel = 1234567890
-		line    = "//cmd -run=" + erun
+		line    = "//cmd `-run=" + erun + "`"
 	)
 
 	msg := discord.Message{

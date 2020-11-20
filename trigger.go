@@ -10,17 +10,22 @@ import (
 	"github.com/diamondburned/arikawa/discord"
 
 	"github.com/go-snart/logs"
+
+	re2 "github.com/dlclark/regexp2"
 )
+
+var splitter = re2.MustCompile(`(\x60+)(.*?)\1|(\S+)`, 0)
 
 // Trigger holds the context that triggered a Command.
 type Trigger struct {
-	Route   *Route
-	Message discord.Message
-	Prefix  *Prefix
-	Command *Command
-	FlagSet *flag.FlagSet
-	Args    []string
-	Flags   interface{}
+	Route    *Route
+	Message  discord.Message
+	Settings Settings
+	Prefix   *Prefix
+	Command  *Command
+	FlagSet  *flag.FlagSet
+	Args     []string
+	Flags    interface{}
 }
 
 // Trigger gets a Trigger by finding an appropriate Command for a given prefix, session, message, etc.
@@ -40,7 +45,7 @@ func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, 
 
 	logs.Debug.Println("line", line)
 
-	args := Split(line)
+	args := split(line)
 
 	logs.Debug.Println("args", args)
 
@@ -156,4 +161,35 @@ func (r *Reply) Send() error {
 	}
 
 	return nil
+}
+
+func split(s string) []string {
+	subj := []rune(s)
+	args := []string(nil)
+
+	for {
+		// will only error if a timeout is set (it isn't)
+		m, _ := splitter.FindRunesMatch(subj)
+		if m == nil {
+			break
+		}
+
+		gs := m.Groups()
+
+		match := gs[3].Capture.String()
+		if match == "" {
+			match = gs[2].Capture.String()
+		}
+
+		args = append(args, match)
+
+		l := gs[0].Capture.Length + 1
+		if l > len(subj) {
+			break
+		}
+
+		subj = subj[l:]
+	}
+
+	return args
 }

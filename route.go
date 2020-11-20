@@ -69,7 +69,7 @@ func (r *Route) Handle(m *gateway.MessageCreateEvent) {
 	for _, line := range lines {
 		logs.Debug.Printf("line %q", line)
 
-		pfx := r.FindPrefix(m.GuildID, line)
+		pfx := r.LinePrefix(m.GuildID, line)
 		if pfx == nil {
 			continue
 		}

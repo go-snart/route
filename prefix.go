@@ -24,7 +24,7 @@ type Prefix struct {
 
 // GuildPrefix finds the prefix for a given Guild.
 func (r *Route) GuildPrefix(g discord.GuildID) (*Prefix, error) {
-	set, _ := r.LoadSettings(g)
+	set, _ := r.Load(g)
 	if set.Prefix == "" {
 		return nil, ErrPrefixUnset
 	}

@@ -6,39 +6,39 @@ import (
 	"github.com/diamondburned/arikawa/discord"
 )
 
+// DefaultGuild is the GuildID used for global settings.
+const DefaultGuild discord.GuildID = 0
+
 // Settings holds global or Guild-specific settings.
 type Settings struct {
 	Prefix string
 }
 
-// LoadSettings retrieves Settings for the given Guild from the Route's DB.
-func (r *Route) LoadSettings(g discord.GuildID) (Settings, error) {
-	key := r.settingsKey(g)
+// Load retrieves Settings for the given Guild from the Route's DB.
+func (r *Route) Load(g discord.GuildID) (Settings, error) {
 	s := Settings{}
 
-	err := r.DB.Get(key, &s)
+	err := r.DB.Get(r.key(g), &s)
 	if err != nil {
-		if g == 0 {
-			return s, r.SaveSettings(g, s)
+		if g == DefaultGuild {
+			return s, r.Save(g, s)
 		}
 
-		return r.LoadSettings(0)
+		return r.Load(DefaultGuild)
 	}
 
 	return s, nil
 }
 
-// SaveSettings stores the given Settings for the given Guild into the Route's DB.
-func (r *Route) SaveSettings(g discord.GuildID, s Settings) error {
-	key := r.settingsKey(g)
-
-	return r.DB.Set(key, s)
+// Save stores the given Settings for the given Guild into the Route's DB.
+func (r *Route) Save(g discord.GuildID, s Settings) error {
+	return r.DB.Set(r.key(g), s)
 }
 
-func (r *Route) settingsKey(g discord.GuildID) string {
-	if g > 0 {
-		return fmt.Sprintf("settings_%d", g)
+func (r *Route) key(g discord.GuildID) string {
+	if g == DefaultGuild {
+		return "settings"
 	}
 
-	return "settings"
+	return fmt.Sprintf("settings_%d", g)
 }

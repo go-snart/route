@@ -3,7 +3,7 @@ package route
 
 import (
 	"errors"
-	"fmt"
+	"log"
 	"strings"
 
 	"github.com/diamondburned/arikawa/gateway"
@@ -11,7 +11,6 @@ import (
 	ff "github.com/itzg/go-flagsfiller"
 
 	"github.com/go-snart/db"
-	"github.com/go-snart/logs"
 )
 
 var (
@@ -49,26 +48,13 @@ func (r *Route) Add(cmds ...*Command) {
 
 // Handle returns a MessageCreate handler function for the Route.
 func (r *Route) Handle(m *gateway.MessageCreateEvent) {
-	logs.Debug.Println("handling")
-
-	if m.Message.Author.ID == r.State.Ready.User.ID {
-		logs.Debug.Println("ignore self")
-
-		return
-	}
-
-	if m.Message.Author.Bot {
-		logs.Debug.Println("ignore bot")
-
+	if m.Message.Author.ID == r.State.Ready.User.ID || m.Message.Author.Bot {
 		return
 	}
 
 	lines := strings.Split(m.Message.Content, "\n")
-	logs.Debug.Printf("lines %#v", lines)
 
 	for _, line := range lines {
-		logs.Debug.Printf("line %q", line)
-
 		pfx := r.LinePrefix(m.GuildID, line)
 		if pfx == nil {
 			continue
@@ -76,16 +62,14 @@ func (r *Route) Handle(m *gateway.MessageCreateEvent) {
 
 		t, err := r.Trigger(pfx, m.Message, line)
 		if err != nil {
-			err = fmt.Errorf("get ctx: %w", err)
-			logs.Warn.Println(err)
+			log.Printf("get trigger: %s", err)
 
 			continue
 		}
 
 		err = t.Run()
 		if err != nil {
-			err = fmt.Errorf("t run: %w", err)
-			logs.Warn.Println(err)
+			log.Printf("run trigger: %s", err)
 
 			continue
 		}

@@ -8,9 +8,6 @@ import (
 
 	"github.com/diamondburned/arikawa/api"
 	"github.com/diamondburned/arikawa/discord"
-
-	"github.com/go-snart/logs"
-
 	re2 "github.com/dlclark/regexp2"
 )
 
@@ -39,27 +36,16 @@ func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, 
 		Flags:   nil,
 	}
 
-	logs.Debug.Println("line", line)
-
 	line = strings.TrimSpace(strings.TrimPrefix(line, pfx.Value))
-
-	logs.Debug.Println("line", line)
 
 	args := split(line)
 
-	logs.Debug.Println("args", args)
-
 	if len(args) == 0 {
-		logs.Debug.Println("0 args")
-
 		return nil, ErrNoCmd
 	}
 
 	cmd := args[0]
-	logs.Debug.Println("cmd", cmd)
-
 	args = args[1:]
-	logs.Debug.Println("args", args)
 
 	for _, c := range r.Commands {
 		if c.Name == cmd {
@@ -68,8 +54,6 @@ func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, 
 			break
 		}
 	}
-
-	logs.Debug.Println("cmd", t.Command)
 
 	if t.Command == nil {
 		return nil, ErrNoTrigger
@@ -154,10 +138,7 @@ func (r *Reply) SendMsg() (*discord.Message, error) {
 func (r *Reply) Send() error {
 	_, err := r.SendMsg()
 	if err != nil {
-		err = fmt.Errorf("send msg: %w", err)
-		logs.Warn.Println(err)
-
-		return err
+		return fmt.Errorf("send msg: %w", err)
 	}
 
 	return nil

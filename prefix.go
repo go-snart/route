@@ -9,8 +9,11 @@ import (
 )
 
 var (
+	// ErrPrefixUnset occurs when the prefix value isn't set in the Settings.
 	ErrPrefixUnset = errors.New("prefix unset")
-	ErrNoPrefix    = errors.New("no suitable prefix")
+
+	// ErrNoPrefix occurs when no suitable prefix was found.
+	ErrNoPrefix = errors.New("no suitable prefix")
 )
 
 // Prefix is a command prefix.
@@ -22,8 +25,6 @@ type Prefix struct {
 // GuildPrefix finds the prefix for a given Guild.
 func (r *Route) GuildPrefix(g discord.GuildID) (*Prefix, error) {
 	set, _ := r.LoadSettings(g)
-	// issue will propogate to ErrPrefixUnset
-
 	if set.Prefix == "" {
 		return nil, ErrPrefixUnset
 	}

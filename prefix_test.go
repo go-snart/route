@@ -24,7 +24,7 @@ func TestLinePrefixGuild(t *testing.T) {
 		Prefix: pfxv,
 	}
 
-	err := r.SaveSettings(guild, set)
+	err := r.Save(guild, set)
 	if err != nil {
 		t.Errorf("save set %d %v: %s", guild, set, err)
 	}

@@ -126,12 +126,12 @@ func TestTriggerUsage(t *testing.T) {
 
 	m.SendMessage(
 		&discord.Embed{
-			Title:       "`cmd` Usage",
+			Title:       "`cmd` usage",
 			Description: "lots of fun stuff",
 			Fields: []discord.EmbedField{
 				{
-					Name:   "Flag `-run`",
-					Value:  "run string\nDefault: `run`",
+					Name:   "flag `-run`",
+					Value:  "run string\ndefault: `run`",
 					Inline: false,
 				},
 			},
@@ -176,12 +176,12 @@ func TestTriggerUsageNoDesc(t *testing.T) {
 
 	m.SendMessage(
 		&discord.Embed{
-			Title:       "`cmd` Usage",
-			Description: "*No description.*",
+			Title:       "`cmd` usage",
+			Description: "*no description*",
 			Fields: []discord.EmbedField{
 				{
-					Name:   "Flag `-run`",
-					Value:  "run string\nDefault: `run`",
+					Name:   "flag `-run`",
+					Value:  "run string\ndefault: `run`",
 					Inline: false,
 				},
 			},
@@ -329,7 +329,7 @@ func TestTriggerNilFlags(t *testing.T) {
 
 	m.SendMessage(
 		&discord.Embed{
-			Title:       "`cmd` Usage",
+			Title:       "`cmd` usage",
 			Description: "lots of fun stuff",
 		},
 		discord.Message{

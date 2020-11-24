@@ -93,19 +93,19 @@ func (t *Trigger) Usage() {
 
 	desc := t.Command.Description
 	if desc == "" {
-		desc = "*No description.*"
+		desc = "*no description*"
 	}
 
 	rep.Embed = &discord.Embed{
-		Title:       "`" + t.Command.Name + "` Usage",
+		Title:       "`" + t.Command.Name + "` usage",
 		Description: desc,
 	}
 
 	t.FlagSet.VisitAll(func(f *flag.Flag) {
 		rep.Embed.Fields = append(
 			rep.Embed.Fields, discord.EmbedField{
-				Name:   "Flag `-" + f.Name + "`",
-				Value:  f.Usage + "\nDefault: `" + f.DefValue + "`",
+				Name:   "flag `-" + f.Name + "`",
+				Value:  f.Usage + "\ndefault: `" + f.DefValue + "`",
 				Inline: false,
 			},
 		)

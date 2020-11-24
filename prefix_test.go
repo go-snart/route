@@ -2,6 +2,7 @@ package route_test
 
 import (
 	"fmt"
+	"net/http"
 	"reflect"
 	"testing"
 
@@ -124,7 +125,7 @@ func TestLinePrefixMemberErr(t *testing.T) {
 	const guild = 666
 
 	m.Error(
-		"GET",
+		http.MethodGet,
 		fmt.Sprintf("/guilds/%d/members", guild),
 		httputil.HTTPError{Status: 404},
 	)

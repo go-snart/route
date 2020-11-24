@@ -45,10 +45,11 @@ func TestTrigger(t *testing.T) {
 		Flags: testFlags{
 			Run: "foo",
 		},
+		Output: tr.Output, // probably shouldn't do this
 	}
 
 	if !reflect.DeepEqual(tr, expect) {
-		t.Errorf("expect %v\ngot %v", expect, tr)
+		t.Errorf("\nexpect %#v\ngot %#v", expect, tr)
 	}
 }
 
@@ -300,4 +301,47 @@ func TestTriggerRun(t *testing.T) {
 	if *run != erun {
 		t.Errorf("expect %q\ngot %q", erun, *run)
 	}
+}
+
+func TestTriggerNilFlags(t *testing.T) {
+	m, s := dismock.NewState(t)
+	r := route.New(testDB(), s)
+
+	c, _ := testCmd()
+	c.Flags = nil
+
+	r.Add(c)
+
+	pfx := &route.Prefix{
+		Value: "//",
+		Clean: "//",
+	}
+
+	const (
+		channel = 123456790
+		line    = "//cmd `-run=foo`"
+	)
+
+	msg := discord.Message{
+		ChannelID: channel,
+		Content:   line,
+	}
+
+	m.SendMessage(
+		&discord.Embed{
+			Title:       "`cmd` Usage",
+			Description: "lots of fun stuff",
+		},
+		discord.Message{
+			ChannelID: channel,
+			Content:   "flag provided but not defined: -run\n",
+		},
+	)
+
+	_, err := r.Trigger(pfx, msg, line)
+	if err == nil {
+		t.Errorf("trigger %q %q: %#v", pfx.Clean, line, err)
+	}
+
+	m.Eval()
 }

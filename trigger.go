@@ -23,6 +23,7 @@ type Trigger struct {
 	FlagSet  *flag.FlagSet
 	Args     []string
 	Flags    interface{}
+	Output   *strings.Builder
 }
 
 // Trigger gets a Trigger by finding an appropriate Command for a given prefix, session, message, etc.
@@ -34,6 +35,7 @@ func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, 
 		Command: nil,
 		Args:    nil,
 		Flags:   nil,
+		Output:  &strings.Builder{},
 	}
 
 	line = strings.TrimSpace(strings.TrimPrefix(line, pfx.Value))
@@ -60,7 +62,12 @@ func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, 
 	}
 
 	t.FlagSet = flag.NewFlagSet(t.Command.Name, flag.ContinueOnError)
+	t.FlagSet.SetOutput(t.Output)
 	t.FlagSet.Usage = t.Usage
+
+	if t.Command.Flags == nil {
+		t.Command.Flags = struct{}{}
+	}
 
 	flags := reflect.New(reflect.TypeOf(t.Command.Flags))
 
@@ -74,8 +81,8 @@ func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, 
 		return nil, fmt.Errorf("parse: %w", err)
 	}
 
-	t.Args = t.FlagSet.Args()
 	t.Flags = flags.Elem().Interface()
+	t.Args = t.FlagSet.Args()
 
 	return t, nil
 }
@@ -83,6 +90,10 @@ func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, 
 // Usage is the help flag handler for the Trigger.
 func (t *Trigger) Usage() {
 	rep := t.Reply()
+
+	if t.Output.Len() > 0 {
+		rep.Content = t.Output.String()
+	}
 
 	desc := t.Command.Description
 	if desc == "" {

@@ -1,6 +1,7 @@
 package route_test
 
 import (
+	"fmt"
 	"io"
 	"testing"
 
@@ -8,11 +9,24 @@ import (
 	"github.com/diamondburned/arikawa/gateway"
 	"github.com/mavolin/dismock/pkg/dismock"
 
+	"github.com/go-snart/db"
 	"github.com/go-snart/route"
 )
 
 type testFlags struct {
 	Run string `default:"run" usage:"run string"`
+}
+
+func testDB() *db.DB {
+	const uri = "mem://"
+
+	d, err := db.Open(uri)
+	if err != nil {
+		err = fmt.Errorf("open %q: %w", uri, err)
+		panic(err)
+	}
+
+	return d
 }
 
 func testCmd() (*route.Command, *string) {

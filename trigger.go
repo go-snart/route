@@ -15,15 +15,14 @@ var splitter = re2.MustCompile(`(\x60+)(.*?)\1|(\S+)`, 0)
 
 // Trigger holds the context that triggered a Command.
 type Trigger struct {
-	Route    *Route
-	Message  discord.Message
-	Settings Settings
-	Prefix   *Prefix
-	Command  *Command
-	FlagSet  *flag.FlagSet
-	Args     []string
-	Flags    interface{}
-	Output   *strings.Builder
+	Route   *Route
+	Message discord.Message
+	Prefix  *Prefix
+	Command *Command
+	FlagSet *flag.FlagSet
+	Args    []string
+	Flags   interface{}
+	Output  *strings.Builder
 }
 
 // Trigger gets a Trigger by finding an appropriate Command for a given prefix, session, message, etc.
@@ -32,9 +31,6 @@ func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, 
 		Route:   r,
 		Message: m,
 		Prefix:  pfx,
-		Command: nil,
-		Args:    nil,
-		Flags:   nil,
 		Output:  &strings.Builder{},
 	}
 

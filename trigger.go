@@ -85,7 +85,11 @@ func (t *Trigger) fillFlagSet() (reflect.Value, error) {
 	flags := reflect.New(reflect.TypeOf(t.Command.Flags))
 
 	err := t.Route.Fill.Fill(t.FlagSet, flags.Interface())
-	return flags, err
+	if err != nil {
+		return reflect.Value{}, fmt.Errorf("fill flags: %w", err)
+	}
+
+	return flags, nil
 }
 
 // Usage is the help flag handler for the Trigger.
@@ -105,6 +109,7 @@ func (t *Trigger) Usage() {
 		_, err := t.fillFlagSet()
 		if err != nil {
 			log.Println("usage fill flagset:", err)
+
 			return
 		}
 	}

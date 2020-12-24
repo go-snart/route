@@ -93,6 +93,7 @@ func (r *Route) runHelp(t *Trigger, name string) {
 		for _, c := range cmds {
 			if c.Name == name {
 				cmd = c
+
 				break
 			}
 		}

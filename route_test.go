@@ -13,6 +13,12 @@ import (
 	"github.com/go-snart/route"
 )
 
+const (
+	testCat  = "test"
+	testName = "cmd"
+	testDesc = "lots of fun stuff"
+)
+
 type testFlags struct {
 	Run string `default:"run" usage:"run string"`
 }
@@ -29,24 +35,12 @@ func testDB() *db.DB {
 	return d
 }
 
-func testCmd() (*route.Command, *string) {
-	run := ""
+func testFunc(run *string) route.Func {
+	return func(t *route.Trigger) error {
+		*run = t.Flags.(testFlags).Run
 
-	return &route.Command{
-		Name:        "cmd",
-		Category:    "misc",
-		Description: "lots of fun stuff",
-
-		Func: func(t *route.Trigger) error {
-			run = t.Flags.(testFlags).Run
-
-			return nil
-		},
-
-		Hidden: false,
-
-		Flags: testFlags{},
-	}, &run
+		return nil
+	}
 }
 
 func TestNew(t *testing.T) {
@@ -70,14 +64,16 @@ func TestAdd(t *testing.T) {
 
 	c, _ := testCmd()
 
-	r.Add(c)
+	r.Add(testCat, c)
 
-	if len(r.Commands) != 1 {
-		t.Errorf("expect: 1\ngot %d", len(r.Commands))
+	cmds := r.Cats[testCat]
+
+	if len(cmds) != 1 {
+		t.Errorf("expect: 1\ngot %d", len(cmds))
 	}
 
-	if r.Commands[0] != c {
-		t.Errorf("expect %v\ngot %v", c, r.Commands[0])
+	if cmds[0] != c {
+		t.Errorf("expect %v\ngot %v", c, cmds[0])
 	}
 }
 
@@ -173,7 +169,7 @@ func TestHandleRunError(t *testing.T) {
 		return io.EOF
 	}
 
-	r.Add(c)
+	r.Add(testCat, c)
 
 	const guild = 123
 
@@ -203,7 +199,7 @@ func TestHandle(t *testing.T) {
 
 	c, run := testCmd()
 
-	r.Add(c)
+	r.Add(testCat, c)
 
 	const guild = 123
 

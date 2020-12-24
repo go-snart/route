@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/diamondburned/arikawa/discord"
@@ -17,7 +18,7 @@ func TestTrigger(t *testing.T) {
 
 	c, _ := testCmd()
 
-	r.Add(c)
+	r.Add(testCat, c)
 
 	pfx := &route.Prefix{
 		Value: "//",
@@ -58,7 +59,7 @@ func TestTriggerErrNoCmd(t *testing.T) {
 
 	c, _ := testCmd()
 
-	r.Add(c)
+	r.Add(testCat, c)
 
 	pfx := &route.Prefix{
 		Value: "//",
@@ -82,7 +83,7 @@ func TestTriggerErrNoTrigger(t *testing.T) {
 
 	c, _ := testCmd()
 
-	r.Add(c)
+	r.Add(testCat, c)
 
 	pfx := &route.Prefix{
 		Value: "//",
@@ -107,7 +108,7 @@ func TestTriggerUsage(t *testing.T) {
 
 	c, _ := testCmd()
 
-	r.Add(c)
+	r.Add(testCat, c)
 
 	pfx := &route.Prefix{
 		Value: "//",
@@ -155,9 +156,9 @@ func TestTriggerUsageNoDesc(t *testing.T) {
 	r := route.New(testDB(), s)
 
 	c, _ := testCmd()
-	c.Description = ""
+	c.Desc = ""
 
-	r.Add(c)
+	r.Add(testCat, c)
 
 	pfx := &route.Prefix{
 		Value: "//",
@@ -206,7 +207,7 @@ func TestTriggerBadFlags(t *testing.T) {
 	c, _ := testCmd()
 	c.Flags = (chan int)(nil)
 
-	r.Add(c)
+	r.Add(testCat, c)
 
 	pfx := &route.Prefix{
 		Value: "//",
@@ -235,7 +236,7 @@ func TestReplySendErr(t *testing.T) {
 
 	c, _ := testCmd()
 
-	r.Add(c)
+	r.Add(testCat, c)
 
 	pfx := &route.Prefix{
 		Value: "//",
@@ -270,7 +271,7 @@ func TestTriggerRun(t *testing.T) {
 
 	c, run := testCmd()
 
-	r.Add(c)
+	r.Add(testCat, c)
 
 	pfx := &route.Prefix{
 		Value: "//",
@@ -310,7 +311,7 @@ func TestTriggerNilFlags(t *testing.T) {
 	c, _ := testCmd()
 	c.Flags = nil
 
-	r.Add(c)
+	r.Add(testCat, c)
 
 	pfx := &route.Prefix{
 		Value: "//",
@@ -342,6 +343,34 @@ func TestTriggerNilFlags(t *testing.T) {
 	if err == nil {
 		t.Errorf("trigger %q %q: %#v", pfx.Clean, line, err)
 	}
+
+	m.Eval()
+}
+
+func TestTriggerUsageFillError(t *testing.T) {
+	m, s := dismock.NewState(t)
+	r := route.New(nil, s)
+
+	c, _ := testCmd()
+	c.Flags = (func())(nil)
+
+	pfx := &route.Prefix{
+		Value: "//",
+		Clean: "//",
+	}
+
+	const channel = 1234567890
+
+	(&route.Trigger{
+		Route:   r,
+		Command: c,
+
+		Message: discord.Message{
+			ChannelID: channel,
+		},
+		Prefix: pfx,
+		Output: &strings.Builder{},
+	}).Usage()
 
 	m.Eval()
 }

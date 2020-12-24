@@ -3,6 +3,7 @@ package route
 import (
 	"flag"
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 
@@ -15,10 +16,11 @@ var splitter = re2.MustCompile(`(\x60+)(.*?)\1|(\S+)`, 0)
 
 // Trigger holds the context that triggered a Command.
 type Trigger struct {
-	Route   *Route
+	*Route
+	*Command
+
 	Message discord.Message
 	Prefix  *Prefix
-	Command *Command
 	FlagSet *flag.FlagSet
 	Args    []string
 	Flags   interface{}
@@ -45,11 +47,13 @@ func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, 
 	cmd := args[0]
 	args = args[1:]
 
-	for _, c := range r.Commands {
-		if c.Name == cmd {
-			t.Command = c
+	for _, cat := range r.Cats {
+		for _, c := range cat {
+			if c.Name == cmd {
+				t.Command = c
 
-			break
+				break
+			}
 		}
 	}
 
@@ -57,17 +61,7 @@ func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, 
 		return nil, ErrNoTrigger
 	}
 
-	t.FlagSet = flag.NewFlagSet(t.Command.Name, flag.ContinueOnError)
-	t.FlagSet.SetOutput(t.Output)
-	t.FlagSet.Usage = t.Usage
-
-	if t.Command.Flags == nil {
-		t.Command.Flags = struct{}{}
-	}
-
-	flags := reflect.New(reflect.TypeOf(t.Command.Flags))
-
-	err := r.Filler.Fill(t.FlagSet, flags.Interface())
+	flags, err := t.fillFlagSet()
 	if err != nil {
 		return nil, fmt.Errorf("fill: %w", err)
 	}
@@ -83,6 +77,17 @@ func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, 
 	return t, nil
 }
 
+func (t *Trigger) fillFlagSet() (reflect.Value, error) {
+	t.FlagSet = flag.NewFlagSet(t.Command.Name, flag.ContinueOnError)
+	t.FlagSet.SetOutput(t.Output)
+	t.FlagSet.Usage = t.Usage
+
+	flags := reflect.New(reflect.TypeOf(t.Command.Flags))
+
+	err := t.Route.Fill.Fill(t.FlagSet, flags.Interface())
+	return flags, err
+}
+
 // Usage is the help flag handler for the Trigger.
 func (t *Trigger) Usage() {
 	rep := t.Reply()
@@ -91,14 +96,17 @@ func (t *Trigger) Usage() {
 		rep.Content = t.Output.String()
 	}
 
-	desc := t.Command.Description
-	if desc == "" {
-		desc = "*no description*"
+	rep.Embed = &discord.Embed{
+		Title:       fmt.Sprintf("`%s` usage", t.Command.Name),
+		Description: t.Command.Desc,
 	}
 
-	rep.Embed = &discord.Embed{
-		Title:       "`" + t.Command.Name + "` usage",
-		Description: desc,
+	if t.FlagSet == nil {
+		_, err := t.fillFlagSet()
+		if err != nil {
+			log.Println("usage fill flagset:", err)
+			return
+		}
 	}
 
 	t.FlagSet.VisitAll(func(f *flag.Flag) {
@@ -122,17 +130,17 @@ func (t *Trigger) Run() error {
 
 // Reply wraps a message to be sent to a given ChannelID using a given Session.
 type Reply struct {
-	Trigger *Trigger
-
 	api.SendMessageData
+
+	Trigger *Trigger
 }
 
 // Reply gets a Reply for the Trigger.
 func (t *Trigger) Reply() *Reply {
 	return &Reply{
-		Trigger: t,
-
 		SendMessageData: api.SendMessageData{},
+
+		Trigger: t,
 	}
 }
 

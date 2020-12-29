@@ -6,7 +6,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/diamondburned/arikawa v1.3.15-0.20201118235528-545149cd5a53
 	github.com/dlclark/regexp2 v1.4.0
-	github.com/go-snart/db v0.6.0
+	github.com/go-snart/db v0.6.1
 	github.com/iancoleman/strcase v0.1.2 // indirect
 	github.com/itzg/go-flagsfiller v1.4.2
 	github.com/kr/text v0.2.0 // indirect

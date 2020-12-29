@@ -15,7 +15,9 @@ func TestHelp(t *testing.T) {
 
 	r.State.Ready.User.Username = "username"
 
-	r.Cats["abc"] = nil
+	const emptyCat = "abc"
+
+	r.Cats[emptyCat] = nil
 
 	c := r.Cats["route"][0]
 
@@ -35,6 +37,9 @@ func TestHelp(t *testing.T) {
 				Text: "use the `-help` flag on a command for detailed help",
 			},
 			Fields: []discord.EmbedField{{
+				Name:  emptyCat,
+				Value: "*no commands*",
+			}, {
 				Name:  route.RouteCat,
 				Value: fmt.Sprintf("`%s%s`: *%s*", pfx.Clean, c.Name, c.Desc),
 			}},

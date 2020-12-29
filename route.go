@@ -29,7 +29,6 @@ type Route struct {
 	*db.DB
 	*state.State
 
-	Errs chan error
 	Fill *ff.FlagSetFiller
 	Cats map[string][]*Command
 }

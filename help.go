@@ -44,32 +44,26 @@ func (r *Route) Help(t *Trigger) error {
 	}
 
 	rep := t.Reply()
+
+	//nolint:exhaustivestruct // discord types are excessive
 	rep.Embed = &discord.Embed{
 		Title:       fmt.Sprintf("%s Help", t.State.Ready.User.Username),
 		Description: fmt.Sprintf("prefix: `%s`", t.Prefix.Clean),
 	}
 
-	cats := make([]string, 0)
-
-	for cat, cmds := range r.Cats {
-		if len(cmds) == 0 {
-			continue
-		}
-
-		cats = append(cats, cat)
-	}
-
-	sort.Strings(cats)
-
-	for _, name := range cats {
+	for _, name := range r.CatNames() {
 		helps := []string(nil)
 
-		for _, c := range r.Cats[name] {
+		for _, cmd := range r.Cats[name] {
 			helps = append(helps, fmt.Sprintf(
 				"`%s%s`: *%s*",
-				t.Prefix.Clean, c.Name,
-				strings.SplitN(c.Desc, "\n", 2)[0],
+				t.Prefix.Clean, cmd.Name,
+				strings.SplitN(cmd.Desc, "\n", 2)[0],
 			))
+		}
+
+		if len(helps) == 0 {
+			helps = append(helps, "*no commands*")
 		}
 
 		rep.Embed.Fields = append(rep.Embed.Fields, discord.EmbedField{
@@ -79,11 +73,25 @@ func (r *Route) Help(t *Trigger) error {
 		})
 	}
 
+	//nolint:exhaustivestruct // discord types are excessive
 	rep.Embed.Footer = &discord.EmbedFooter{
 		Text: "use the `-help` flag on a command for detailed help",
 	}
 
 	return rep.Send()
+}
+
+// CatNames returns the category names, sorted.
+func (r *Route) CatNames() []string {
+	cats := make([]string, 0, len(r.Cats))
+
+	for cat := range r.Cats {
+		cats = append(cats, cat)
+	}
+
+	sort.Strings(cats)
+
+	return cats
 }
 
 func (r *Route) runHelp(t *Trigger, name string) {
@@ -111,10 +119,14 @@ func (r *Route) runHelp(t *Trigger, name string) {
 		Route:   t.Route,
 		Command: cmd,
 
+		//nolint:exhaustivestruct // discord types are excessive
 		Message: discord.Message{
 			ChannelID: t.Message.ChannelID,
 		},
-		Prefix: t.Prefix,
-		Output: &strings.Builder{},
+		Prefix:  t.Prefix,
+		FlagSet: nil,
+		Args:    nil,
+		Flags:   nil,
+		Output:  &strings.Builder{},
 	}).Usage()
 }

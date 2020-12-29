@@ -1,6 +1,7 @@
 package route
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -12,7 +13,11 @@ import (
 	re2 "github.com/dlclark/regexp2"
 )
 
+//nolint:gochecknoglobals // pre-compiling regexp
 var splitter = re2.MustCompile(`(\x60+)(.*?)\1|(\S+)`, 0)
+
+// ErrCommandNotFound occurs when an unknown command is called.
+var ErrCommandNotFound = errors.New("command not found")
 
 // Trigger holds the context that triggered a Command.
 type Trigger struct {
@@ -21,34 +26,39 @@ type Trigger struct {
 
 	Message discord.Message
 	Prefix  *Prefix
+
 	FlagSet *flag.FlagSet
 	Args    []string
 	Flags   interface{}
-	Output  *strings.Builder
+
+	Output *strings.Builder
 }
 
 // Trigger gets a Trigger by finding an appropriate Command for a given prefix, session, message, etc.
 func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, error) {
 	t := &Trigger{
 		Route:   r,
+		Command: nil,
+
 		Message: m,
 		Prefix:  pfx,
-		Output:  &strings.Builder{},
+
+		FlagSet: nil,
+		Args:    nil,
+		Flags:   nil,
+
+		Output: &strings.Builder{},
 	}
 
 	line = strings.TrimSpace(strings.TrimPrefix(line, pfx.Value))
-
-	args := split(line)
-
-	if len(args) == 0 {
+	if len(line) == 0 {
 		return nil, ErrNoCmd
 	}
 
-	cmd := args[0]
-	args = args[1:]
+	cmd, args := split(line)
 
-	for _, cat := range r.Cats {
-		for _, c := range cat {
+	for _, cmds := range r.Cats {
+		for _, c := range cmds {
 			if c.Name == cmd {
 				t.Command = c
 
@@ -100,6 +110,7 @@ func (t *Trigger) Usage() {
 		rep.Content = t.Output.String()
 	}
 
+	//nolint:exhaustivestruct // discord types are excessive
 	rep.Embed = &discord.Embed{
 		Title:       fmt.Sprintf("`%s` usage", t.Command.Name),
 		Description: t.Command.Desc,
@@ -164,21 +175,17 @@ func (r *Reply) Send() error {
 	return nil
 }
 
-func split(s string) []string {
+func split(s string) (string, []string) {
 	subj := []rune(s)
 	args := []string(nil)
 
 	for {
 		// will only error if a timeout is set (it isn't)
 		m, _ := splitter.FindRunesMatch(subj)
-		if m == nil {
-			break
-		}
-
 		gs := m.Groups()
 
 		match := gs[3].Capture.String()
-		if match == "" {
+		if len(match) == 0 {
 			match = gs[2].Capture.String()
 		}
 
@@ -192,5 +199,5 @@ func split(s string) []string {
 		subj = subj[l:]
 	}
 
-	return args
+	return args[0], args[1:]
 }

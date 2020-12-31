@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
 )
 
 // HelpFlags is flags for Help.
@@ -47,7 +47,7 @@ func (r *Route) Help(t *Trigger) error {
 
 	//nolint:exhaustivestruct // discord types are excessive
 	rep.Embed = &discord.Embed{
-		Title:       fmt.Sprintf("%s Help", t.State.Ready.User.Username),
+		Title:       fmt.Sprintf("%s Help", t.DisplayName()),
 		Description: fmt.Sprintf("prefix: `%s`", t.Prefix.Clean),
 	}
 
@@ -97,7 +97,7 @@ func (r *Route) CatNames() []string {
 func (r *Route) runHelp(t *Trigger, name string) {
 	cmd := (*Command)(nil)
 
-	for _, cmds := range t.Cats {
+	for _, cmds := range t.Route.Cats {
 		for _, c := range cmds {
 			if c.Name == name {
 				cmd = c
@@ -116,14 +116,14 @@ func (r *Route) runHelp(t *Trigger, name string) {
 	}
 
 	(&Trigger{
-		Route:   t.Route,
-		Command: cmd,
-
+		Route: t.Route,
+		MMe:   nil,
 		//nolint:exhaustivestruct // discord types are excessive
 		Message: discord.Message{
 			ChannelID: t.Message.ChannelID,
 		},
 		Prefix:  t.Prefix,
+		Command: cmd,
 		FlagSet: nil,
 		Args:    nil,
 		Flags:   nil,

@@ -3,9 +3,10 @@ package route
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
 )
 
 var (
@@ -14,6 +15,9 @@ var (
 
 	// ErrNoPrefix occurs when no suitable prefix was found.
 	ErrNoPrefix = errors.New("no suitable prefix")
+
+	// ErrNullGuild occurs when you get a prefix on a null guild id.
+	ErrNullGuild = errors.New("guild is null")
 )
 
 // Prefix is a command prefix.
@@ -24,6 +28,10 @@ type Prefix struct {
 
 // GuildPrefix finds the prefix for a given Guild.
 func (r *Route) GuildPrefix(g discord.GuildID) (*Prefix, error) {
+	if g.IsNull() {
+		return nil, ErrNullGuild
+	}
+
 	set, _ := r.Load(g)
 	if set.Prefix == "" {
 		return nil, ErrPrefixUnset
@@ -36,22 +44,32 @@ func (r *Route) GuildPrefix(g discord.GuildID) (*Prefix, error) {
 }
 
 // UserPrefix makes the user mention prefix.
-func (r *Route) UserPrefix() *Prefix {
-	me := r.State.Ready.User
+func (r *Route) UserPrefix() (*Prefix, error) {
+	me, err := r.GetMe()
+	if err != nil {
+		return nil, fmt.Errorf("get me: %w", err)
+	}
 
 	return &Prefix{
 		Value: me.Mention(),
 		Clean: "@" + me.Username,
-	}
+	}, nil
 }
 
 // MemberPrefix finds the member mention prefix for a given Guild.
 func (r *Route) MemberPrefix(g discord.GuildID) (*Prefix, error) {
-	me := r.State.Ready.User
+	if g.IsNull() {
+		return nil, ErrNullGuild
+	}
+
+	me, err := r.GetMe()
+	if err != nil {
+		return nil, fmt.Errorf("get me from state: %w", err)
+	}
 
 	mme, err := r.State.Member(g, me.ID)
 	if err != nil {
-		return nil, fmt.Errorf("member %d %d: %w", g, me.ID, err)
+		return nil, fmt.Errorf("get me member %d %d: %w", g, me.ID, err)
 	}
 
 	if mme.Nick != "" {
@@ -70,17 +88,23 @@ func (r *Route) MemberPrefix(g discord.GuildID) (*Prefix, error) {
 // FindPrefix finds the first suitable prefix, where "suitable" is defined as a truthy return from fn.
 func (r *Route) FindPrefix(g discord.GuildID, fn func(*Prefix) bool) *Prefix {
 	pfx, err := r.GuildPrefix(g)
-	if err == nil && fn(pfx) {
-		return pfx
-	}
-
-	pfx = r.UserPrefix()
-	if fn(pfx) {
+	if err != nil {
+		log.Println("guild prefix", g, err)
+	} else if fn(pfx) {
 		return pfx
 	}
 
 	pfx, err = r.MemberPrefix(g)
-	if err == nil && fn(pfx) {
+	if err != nil {
+		log.Println("member prefix", g, err)
+	} else if fn(pfx) {
+		return pfx
+	}
+
+	pfx, err = r.UserPrefix()
+	if err != nil {
+		log.Println("user prefix", err)
+	} else if fn(pfx) {
 		return pfx
 	}
 

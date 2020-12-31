@@ -3,7 +3,7 @@ package route
 import (
 	"fmt"
 
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
 )
 
 // DefaultGuild is the GuildID used for global settings.

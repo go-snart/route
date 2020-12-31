@@ -8,30 +8,33 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/diamondburned/arikawa/api"
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/api"
+	"github.com/diamondburned/arikawa/v2/discord"
 	re2 "github.com/dlclark/regexp2"
 )
 
 //nolint:gochecknoglobals // pre-compiling regexp
 var splitter = re2.MustCompile(`(\x60+)(.*?)\1|(\S+)`, 0)
 
-// ErrCommandNotFound occurs when an unknown command is called.
-var ErrCommandNotFound = errors.New("command not found")
+var (
+	// ErrCommandNotFound occurs when an unknown command is called.
+	ErrCommandNotFound = errors.New("command not found")
+
+	// ErrNoCommand occurs when there is no command after the prefix.
+	ErrNoCommand = errors.New("no command")
+)
 
 // Trigger holds the context that triggered a Command.
 type Trigger struct {
-	*Route
-	*Command
-
+	Route   *Route
+	MMe     *discord.Member
 	Message discord.Message
 	Prefix  *Prefix
-
+	Command *Command
 	FlagSet *flag.FlagSet
 	Args    []string
 	Flags   interface{}
-
-	Output *strings.Builder
+	Output  *strings.Builder
 }
 
 // Trigger gets a Trigger by finding an appropriate Command for a given prefix, session, message, etc.
@@ -39,20 +42,18 @@ func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, 
 	t := &Trigger{
 		Route:   r,
 		Command: nil,
-
+		MMe:     nil,
 		Message: m,
 		Prefix:  pfx,
-
 		FlagSet: nil,
 		Args:    nil,
 		Flags:   nil,
-
-		Output: &strings.Builder{},
+		Output:  &strings.Builder{},
 	}
 
 	line = strings.TrimSpace(strings.TrimPrefix(line, pfx.Value))
 	if len(line) == 0 {
-		return nil, ErrNoCmd
+		return nil, ErrNoCommand
 	}
 
 	cmd, args := split(line)
@@ -68,7 +69,7 @@ func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, 
 	}
 
 	if t.Command == nil {
-		return nil, ErrNoTrigger
+		return nil, ErrCommandNotFound
 	}
 
 	flags, err := t.fillFlagSet()
@@ -85,6 +86,31 @@ func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, 
 	t.Args = t.FlagSet.Args()
 
 	return t, nil
+}
+
+// GetMMe wraps the Trigger's MMe field, pulling from Route's State if needed.
+func (t *Trigger) GetMMe() (*discord.Member, error) {
+	if t.MMe != nil {
+		return t.MMe, nil
+	}
+
+	if t.Message.GuildID.IsNull() {
+		return nil, ErrNullGuild
+	}
+
+	me, err := t.Route.GetMe()
+	if err != nil {
+		return nil, fmt.Errorf("get me: %w", err)
+	}
+
+	mme, err := t.Route.State.Member(t.Message.GuildID, me.ID)
+	if err != nil {
+		return nil, fmt.Errorf("state member %d %d: %w", t.Message.GuildID, me.ID, err)
+	}
+
+	t.MMe = mme
+
+	return mme, nil
 }
 
 func (t *Trigger) fillFlagSet() (reflect.Value, error) {
@@ -169,7 +195,7 @@ func (r *Reply) SendMsg() (*discord.Message, error) {
 func (r *Reply) Send() error {
 	_, err := r.SendMsg()
 	if err != nil {
-		return fmt.Errorf("send msg: %w", err)
+		return fmt.Errorf("send reply: %w", err)
 	}
 
 	return nil

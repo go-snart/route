@@ -2,12 +2,13 @@
 package route
 
 import (
-	"errors"
+	"fmt"
 	"log"
 	"strings"
 
-	"github.com/diamondburned/arikawa/gateway"
-	"github.com/diamondburned/arikawa/state"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/gateway"
+	"github.com/diamondburned/arikawa/v2/state"
 	ff "github.com/itzg/go-flagsfiller"
 
 	"github.com/go-snart/db"
@@ -16,21 +17,13 @@ import (
 // RouteCat is the category name for internal Commands.
 const RouteCat = "route"
 
-var (
-	// ErrNoCmd occurs when no command is given after a prefix.
-	ErrNoCmd = errors.New("no cmd")
-
-	// ErrNoTrigger occurs when no suitable Command is found to create a Trigger.
-	ErrNoTrigger = errors.New("no ctx found")
-)
-
 // Route handles storing and looking up routes.
 type Route struct {
-	*db.DB
-	*state.State
-
-	Fill *ff.FlagSetFiller
-	Cats map[string][]*Command
+	DB    *db.DB
+	State *state.State
+	Fill  *ff.FlagSetFiller
+	Cats  map[string][]*Command
+	Me    *discord.User
 }
 
 // New makes an empty Route from the given DB and Session.
@@ -38,9 +31,9 @@ func New(d *db.DB, s *state.State) *Route {
 	r := &Route{
 		DB:    d,
 		State: s,
-
-		Fill: ff.New(),
-		Cats: make(map[string][]*Command),
+		Fill:  ff.New(),
+		Cats:  make(map[string][]*Command),
+		Me:    nil,
 	}
 
 	r.Add(RouteCat,
@@ -59,9 +52,32 @@ func (r *Route) Add(cat string, cmds ...*Command) {
 	r.Cats[cat] = append(r.Cats[cat], cmds...)
 }
 
+// GetMe wraps the Route's Me field, pulling from State if needed.
+func (r *Route) GetMe() (*discord.User, error) {
+	if r.Me != nil {
+		return r.Me, nil
+	}
+
+	me, err := r.State.Me()
+	if err != nil {
+		return nil, fmt.Errorf("state me: %w", err)
+	}
+
+	r.Me = me
+
+	return me, nil
+}
+
 // Handle returns a MessageCreate handler function for the Route.
 func (r *Route) Handle(m *gateway.MessageCreateEvent) {
-	if m.Message.Author.ID == r.State.Ready.User.ID || m.Message.Author.Bot {
+	me, err := r.GetMe()
+	if err != nil {
+		log.Printf("get me: %s", err)
+
+		return
+	}
+
+	if m.Message.Author.ID == me.ID || m.Message.Author.Bot {
 		return
 	}
 

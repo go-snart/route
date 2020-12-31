@@ -3,11 +3,13 @@ package route_test
 import (
 	"fmt"
 	"io"
+	"net/http"
 	"testing"
 
-	"github.com/diamondburned/arikawa/discord"
-	"github.com/diamondburned/arikawa/gateway"
-	"github.com/mavolin/dismock/pkg/dismock"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/gateway"
+	"github.com/diamondburned/arikawa/v2/utils/httputil"
+	"github.com/mavolin/dismock/v2/pkg/dismock"
 
 	"github.com/go-snart/db"
 	"github.com/go-snart/route"
@@ -17,6 +19,23 @@ const (
 	testCat  = "test"
 	testName = "cmd"
 	testDesc = "lots of fun stuff"
+)
+
+var (
+	testMe = discord.User{
+		ID:       1234567890,
+		Username: "User",
+		Bot:      true,
+	}
+
+	testMMe = discord.Member{
+		User: testMe,
+	}
+
+	testMMeNick = discord.Member{
+		User: testMe,
+		Nick: "Nick",
+	}
 )
 
 type testFlags struct {
@@ -81,11 +100,11 @@ func TestHandleIgnoreSelf(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testDB(), s)
 
-	me := r.State.Ready.User
+	m.Me(testMe)
 
 	r.Handle(&gateway.MessageCreateEvent{
 		Message: discord.Message{
-			Author: me,
+			Author: testMe,
 		},
 	})
 
@@ -95,6 +114,8 @@ func TestHandleIgnoreSelf(t *testing.T) {
 func TestHandleIgnoreBot(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testDB(), s)
+
+	m.Me(testMe)
 
 	r.Handle(&gateway.MessageCreateEvent{
 		Message: discord.Message{
@@ -114,12 +135,8 @@ func TestHandleNoPrefix(t *testing.T) {
 
 	const guild = 123
 
-	me := r.State.Ready.User
-	mme := discord.Member{
-		User: me,
-	}
-
-	m.Member(guild, mme)
+	m.Me(testMe)
+	m.Member(guild, testMMe)
 
 	r.Handle(&gateway.MessageCreateEvent{
 		Message: discord.Message{
@@ -134,18 +151,14 @@ func TestHandleNoPrefix(t *testing.T) {
 	m.Eval()
 }
 
-func TestHandleNoTrigger(t *testing.T) {
+func TestHandleCommandNotFound(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testDB(), s)
 
 	const guild = 123
 
-	me := r.State.Ready.User
-	mme := discord.Member{
-		User: me,
-	}
-
-	m.Member(guild, mme)
+	m.Me(testMe)
+	m.Member(guild, testMMe)
 
 	r.Handle(&gateway.MessageCreateEvent{
 		Message: discord.Message{
@@ -153,7 +166,7 @@ func TestHandleNoTrigger(t *testing.T) {
 			Author: discord.User{
 				ID: 999,
 			},
-			Content: mme.Mention(),
+			Content: testMMe.Mention(),
 		},
 	})
 
@@ -173,12 +186,8 @@ func TestHandleRunError(t *testing.T) {
 
 	const guild = 123
 
-	me := r.State.Ready.User
-	mme := discord.Member{
-		User: me,
-	}
-
-	m.Member(guild, mme)
+	m.Me(testMe)
+	m.Member(guild, testMMe)
 
 	r.Handle(&gateway.MessageCreateEvent{
 		Message: discord.Message{
@@ -186,7 +195,7 @@ func TestHandleRunError(t *testing.T) {
 			Author: discord.User{
 				ID: 999,
 			},
-			Content: mme.Mention() + " " + c.Name,
+			Content: testMMe.Mention() + " " + c.Name,
 		},
 	})
 
@@ -203,12 +212,8 @@ func TestHandle(t *testing.T) {
 
 	const guild = 123
 
-	me := r.State.Ready.User
-	mme := discord.Member{
-		User: me,
-	}
-
-	m.Member(guild, mme)
+	m.Me(testMe)
+	m.Member(guild, testMMe)
 
 	const testRun = "foo"
 
@@ -218,12 +223,47 @@ func TestHandle(t *testing.T) {
 			Author: discord.User{
 				ID: 999,
 			},
-			Content: mme.Mention() + " " + c.Name + " -run=" + testRun,
+			Content: testMMe.Mention() + " " + c.Name + " -run=" + testRun,
 		},
 	})
 
 	if *run != testRun {
 		t.Errorf("expect %q\ngot %q", testRun, *run)
+	}
+
+	m.Eval()
+}
+
+func TestHandleMeError(t *testing.T) {
+	m, s := dismock.NewState(t)
+	r := route.New(testDB(), s)
+
+	c, run := testCmd()
+
+	r.Add(testCat, c)
+
+	const guild = 123
+
+	m.Error(
+		http.MethodGet,
+		"/users/@me",
+		httputil.HTTPError{Status: 404},
+	)
+
+	const testRun = "foo"
+
+	r.Handle(&gateway.MessageCreateEvent{
+		Message: discord.Message{
+			GuildID: guild,
+			Author: discord.User{
+				ID: 999,
+			},
+			Content: testMMe.Mention() + " " + c.Name + " -run=" + testRun,
+		},
+	})
+
+	if *run != "" {
+		t.Errorf("expect %q\ngot %q", "", *run)
 	}
 
 	m.Eval()

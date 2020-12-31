@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/diamondburned/arikawa/discord"
-	"github.com/diamondburned/arikawa/utils/httputil"
-	"github.com/mavolin/dismock/pkg/dismock"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/utils/httputil"
+	"github.com/mavolin/dismock/v2/pkg/dismock"
 
 	"github.com/go-snart/route"
 )
@@ -42,39 +42,37 @@ func TestLinePrefixGuild(t *testing.T) {
 }
 
 func TestLinePrefixUser(t *testing.T) {
-	_, s := dismock.NewState(t)
+	m, s := dismock.NewState(t)
 	r := route.New(testDB(), s)
 
-	me := r.State.Ready.User
+	m.Me(testMe)
 
-	pfx := r.LinePrefix(0, me.Mention())
+	pfx := r.LinePrefix(discord.NullGuildID, testMe.Mention())
 	expect := &route.Prefix{
-		Value: me.Mention(),
-		Clean: "@" + me.Username,
+		Value: testMe.Mention(),
+		Clean: "@User",
 	}
 
 	if !reflect.DeepEqual(pfx, expect) {
 		t.Errorf("expect: %v\ngot: %v", expect, pfx)
 	}
+
+	m.Eval()
 }
 
 func TestLinePrefixMember(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testDB(), s)
 
-	me := r.State.Ready.User
-	mme := discord.Member{
-		User: me,
-	}
-
 	const guild = 666
 
-	m.Member(guild, mme)
+	m.Me(testMe)
+	m.Member(guild, testMMe)
 
-	pfx := r.LinePrefix(guild, mme.Mention())
+	pfx := r.LinePrefix(guild, testMMe.Mention())
 	expect := &route.Prefix{
-		Value: mme.Mention(),
-		Clean: "@" + me.Username,
+		Value: testMMe.Mention(),
+		Clean: "@User",
 	}
 
 	if !reflect.DeepEqual(pfx, expect) {
@@ -88,22 +86,15 @@ func TestLinePrefixMemberNick(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testDB(), s)
 
-	const nick = "foo"
-
-	me := r.State.Ready.User
-	mme := discord.Member{
-		User: me,
-		Nick: nick,
-	}
-
 	const guild = 666
 
-	m.Member(guild, mme)
+	m.Me(testMe)
+	m.Member(guild, testMMeNick)
 
-	pfx := r.LinePrefix(guild, mme.Mention())
+	pfx := r.LinePrefix(guild, testMMeNick.Mention())
 	expect := &route.Prefix{
-		Value: mme.Mention(),
-		Clean: "@" + nick,
+		Value: testMMeNick.Mention(),
+		Clean: "@" + testMMeNick.Nick,
 	}
 
 	if !reflect.DeepEqual(pfx, expect) {
@@ -117,20 +108,16 @@ func TestLinePrefixMemberErr(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testDB(), s)
 
-	me := r.State.Ready.User
-	mme := discord.Member{
-		User: me,
-	}
-
 	const guild = 666
 
+	m.Me(testMe)
 	m.Error(
 		http.MethodGet,
-		fmt.Sprintf("/guilds/%d/members", guild),
+		fmt.Sprintf("/guilds/%d/members/%d", guild, testMe.ID),
 		httputil.HTTPError{Status: 404},
 	)
 
-	pfx := r.LinePrefix(guild, mme.Mention())
+	pfx := r.LinePrefix(guild, testMMe.Mention())
 	expect := (*route.Prefix)(nil)
 
 	if !reflect.DeepEqual(pfx, expect) {
@@ -144,20 +131,35 @@ func TestLinePrefixNil(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testDB(), s)
 
-	me := r.State.Ready.User
-	mme := discord.Member{
-		User: me,
-	}
-
 	const guild = 666
 
-	m.Member(guild, mme)
+	m.Me(testMe)
+	m.Member(guild, testMMe)
 
 	pfx := r.LinePrefix(guild, "")
 	expect := (*route.Prefix)(nil)
 
 	if !reflect.DeepEqual(pfx, expect) {
 		t.Errorf("expect: %v\ngot: %v", expect, pfx)
+	}
+
+	m.Eval()
+}
+
+func TestFindPrefixUserError(t *testing.T) {
+	m, s := dismock.NewState(t)
+	r := route.New(testDB(), s)
+
+	const guild = 666
+
+	m.Error(http.MethodGet, "/users/@me", httputil.HTTPError{Status: 404})
+	m.Error(http.MethodGet, "/users/@me", httputil.HTTPError{Status: 404})
+
+	pfx := r.FindPrefix(guild, func(*route.Prefix) bool {
+		return true
+	})
+	if pfx != nil {
+		t.Errorf("expect nil\ngot: %v", pfx)
 	}
 
 	m.Eval()

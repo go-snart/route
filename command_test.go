@@ -4,9 +4,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/diamondburned/arikawa/discord"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/mavolin/dismock/v2/pkg/dismock"
+
 	"github.com/go-snart/route"
-	"github.com/mavolin/dismock/pkg/dismock"
 )
 
 func testCmd() (*route.Command, *string) {

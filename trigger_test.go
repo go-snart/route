@@ -3,12 +3,15 @@ package route_test
 import (
 	"errors"
 	"flag"
+	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/diamondburned/arikawa/discord"
-	"github.com/mavolin/dismock/pkg/dismock"
+	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/utils/httputil"
+	"github.com/mavolin/dismock/v2/pkg/dismock"
 
 	"github.com/go-snart/route"
 )
@@ -73,12 +76,12 @@ func TestTriggerErrNoCmd(t *testing.T) {
 	}
 
 	_, err := r.Trigger(pfx, msg, line)
-	if !errors.Is(err, route.ErrNoCmd) {
-		t.Errorf("trigger %q %q", pfx.Clean, line)
+	if !errors.Is(err, route.ErrNoCommand) {
+		t.Errorf("trigger %q %q: %w", pfx.Clean, line, err)
 	}
 }
 
-func TestTriggerErrNoTrigger(t *testing.T) {
+func TestTriggerErrCommandNotFound(t *testing.T) {
 	r := route.New(testDB(), nil)
 
 	c, _ := testCmd()
@@ -97,8 +100,8 @@ func TestTriggerErrNoTrigger(t *testing.T) {
 	}
 
 	_, err := r.Trigger(pfx, msg, line)
-	if !errors.Is(err, route.ErrNoTrigger) {
-		t.Errorf("trigger %q %q", pfx.Clean, line)
+	if !errors.Is(err, route.ErrCommandNotFound) {
+		t.Errorf("trigger %q %q: %w", pfx.Clean, line, err)
 	}
 }
 
@@ -371,6 +374,183 @@ func TestTriggerUsageFillError(t *testing.T) {
 		Prefix: pfx,
 		Output: &strings.Builder{},
 	}).Usage()
+
+	m.Eval()
+}
+
+func TestGetMMe(t *testing.T) {
+	m, s := dismock.NewState(t)
+	r := route.New(testDB(), s)
+
+	c, _ := testCmd()
+	r.Add(testCat, c)
+
+	pfx := &route.Prefix{
+		Value: "//",
+		Clean: "//",
+	}
+
+	const (
+		guild   = 1234567890
+		channel = 1234567890
+		line    = "//cmd"
+	)
+
+	m.Me(testMe)
+	m.Member(guild, testMMe)
+
+	msg := discord.Message{
+		GuildID:   guild,
+		ChannelID: channel,
+		Content:   line,
+	}
+
+	tr, err := r.Trigger(pfx, msg, line)
+	if err != nil {
+		t.Errorf("trigger %q %q: %s", pfx.Clean, line, err)
+	}
+
+	mme, err := tr.GetMMe()
+	if err != nil {
+		t.Errorf("get mme: %s", err)
+	}
+
+	if !reflect.DeepEqual(testMMe, *mme) {
+		t.Errorf("expect %#v\ngot %#v", testMMe, *mme)
+	}
+
+	m.Eval()
+}
+
+func TestGetMMeExists(t *testing.T) {
+	tr := &route.Trigger{
+		MMe: &testMMe,
+	}
+
+	mme, err := tr.GetMMe()
+	if err != nil {
+		t.Errorf("get mme: %s", err)
+	}
+
+	if !reflect.DeepEqual(testMMe, *mme) {
+		t.Errorf("expect %#v\ngot %#v", testMMe, *mme)
+	}
+}
+
+func TestGetMMeNullGuild(t *testing.T) {
+	m, s := dismock.NewState(t)
+	r := route.New(testDB(), s)
+
+	c, _ := testCmd()
+	r.Add(testCat, c)
+
+	pfx := &route.Prefix{
+		Value: "//",
+		Clean: "//",
+	}
+
+	const (
+		guild   = discord.NullGuildID
+		channel = 1234567890
+		line    = "//cmd"
+	)
+
+	msg := discord.Message{
+		GuildID:   guild,
+		ChannelID: channel,
+		Content:   line,
+	}
+
+	tr, err := r.Trigger(pfx, msg, line)
+	if err != nil {
+		t.Errorf("trigger %q %q: %s", pfx.Clean, line, err)
+	}
+
+	_, err = tr.GetMMe()
+	if !errors.Is(err, route.ErrNullGuild) {
+		t.Errorf("get mme: %s", err)
+	}
+
+	m.Eval()
+}
+
+func TestGetMMeErrorMe(t *testing.T) {
+	m, s := dismock.NewState(t)
+	r := route.New(testDB(), s)
+
+	c, _ := testCmd()
+	r.Add(testCat, c)
+
+	pfx := &route.Prefix{
+		Value: "//",
+		Clean: "//",
+	}
+
+	const (
+		guild   = 1234567890
+		channel = 1234567890
+		line    = "//cmd"
+	)
+
+	m.Error(http.MethodGet, "/users/@me", httputil.HTTPError{Status: 404})
+
+	msg := discord.Message{
+		GuildID:   guild,
+		ChannelID: channel,
+		Content:   line,
+	}
+
+	tr, err := r.Trigger(pfx, msg, line)
+	if err != nil {
+		t.Errorf("trigger %q %q: %s", pfx.Clean, line, err)
+	}
+
+	_, err = tr.GetMMe()
+	if err == nil {
+		t.Errorf("get mme: %s", err)
+	}
+
+	m.Eval()
+}
+
+func TestGetMMeErrorMember(t *testing.T) {
+	m, s := dismock.NewState(t)
+	r := route.New(testDB(), s)
+
+	c, _ := testCmd()
+	r.Add(testCat, c)
+
+	pfx := &route.Prefix{
+		Value: "//",
+		Clean: "//",
+	}
+
+	const (
+		guild   = 1234567890
+		channel = 1234567890
+		line    = "//cmd"
+	)
+
+	m.Me(testMe)
+	m.Error(http.MethodGet,
+		fmt.Sprintf("/guilds/%d/members/%d", guild, testMe.ID),
+		httputil.HTTPError{Status: 404})
+
+	msg := discord.Message{
+		GuildID:   guild,
+		ChannelID: channel,
+		Content:   line,
+	}
+
+	tr, err := r.Trigger(pfx, msg, line)
+	if err != nil {
+		t.Errorf("trigger %q %q: %s", pfx.Clean, line, err)
+	}
+
+	_, err = tr.GetMMe()
+	if err == nil {
+		t.Errorf("get mme: %s", err)
+	}
 
 	m.Eval()
 }

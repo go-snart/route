@@ -4,10 +4,9 @@ go 1.15
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/diamondburned/arikawa v1.3.14
 	github.com/diamondburned/arikawa/v2 v2.0.0-20201227001310-f3f075b27f44
 	github.com/dlclark/regexp2 v1.4.0
-	github.com/go-snart/db v0.6.1
+	github.com/go-snart/db v0.7.1
 	github.com/iancoleman/strcase v0.1.2 // indirect
 	github.com/itzg/go-flagsfiller v1.4.2
 	github.com/kr/text v0.2.0 // indirect

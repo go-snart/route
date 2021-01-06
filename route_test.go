@@ -71,8 +71,9 @@ func TestNew(t *testing.T) {
 		t.Errorf("expect %v\ngot %v", s, r.State)
 	}
 
-	if r.DB != d {
-		t.Errorf("expect %v\ngot %v", d, r.DB)
+	tb := d.Table(route.RouteTable)
+	if r.DB.String() != tb.String() {
+		t.Errorf("expect %q\ngot %q", tb, r.DB)
 	}
 
 	m.Eval()

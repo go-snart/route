@@ -352,7 +352,7 @@ func TestTriggerNilFlags(t *testing.T) {
 
 func TestTriggerUsageFillError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(nil, s)
+	r := route.New(testDB(), s)
 
 	c, _ := testCmd()
 	c.Flags = (func())(nil)

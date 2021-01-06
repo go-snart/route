@@ -35,7 +35,7 @@ func TestTidyDesc(t *testing.T) {
 
 func TestTidyFunc(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(nil, s)
+	r := route.New(testDB(), s)
 
 	c, _ := testCmd()
 	c.Func = nil

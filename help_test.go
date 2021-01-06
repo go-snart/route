@@ -11,7 +11,7 @@ import (
 
 func TestHelp(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(nil, s)
+	r := route.New(testDB(), s)
 
 	const emptyCat = "abc"
 
@@ -71,7 +71,7 @@ func TestHelp(t *testing.T) {
 
 func TestHelpHelpception(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(nil, s)
+	r := route.New(testDB(), s)
 
 	c := r.Cats["route"][0]
 
@@ -102,7 +102,7 @@ func TestHelpHelpception(t *testing.T) {
 
 func TestHelpUsage(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(nil, s)
+	r := route.New(testDB(), s)
 
 	c := r.Cats["route"][0]
 
@@ -145,7 +145,7 @@ func TestHelpUsage(t *testing.T) {
 
 func TestHelpUsageUnknown(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(nil, s)
+	r := route.New(testDB(), s)
 
 	c := r.Cats["route"][0]
 

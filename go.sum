@@ -8,10 +8,8 @@ github.com/diamondburned/arikawa/v2 v2.0.0-20201227001310-f3f075b27f44 h1:i6Jec7
 github.com/diamondburned/arikawa/v2 v2.0.0-20201227001310-f3f075b27f44/go.mod h1:e+lhS20ni2luFEU06Pc8paCxgZL99/RZb77dOC82CF0=
 github.com/dlclark/regexp2 v1.4.0 h1:F1rxgk7p4uKjwIQxBs9oAXe5CqrXlCduYEJvrF4u93E=
 github.com/dlclark/regexp2 v1.4.0/go.mod h1:2pZnwuY/m+8K6iRw6wQdMtk+rH5tNGR1i55kozfMjCc=
-github.com/go-snart/db v0.6.1 h1:S2fawYauTHu3fQBZDXZByjM4NgF2qEKAlIcOO/7Thfc=
-github.com/go-snart/db v0.6.1/go.mod h1:hP733SXY6AJRRdwHbDoc6BYflETosmFcxfS2kxRe/70=
-github.com/go-snart/db v0.7.1 h1:WxHtC8ksAWC/q44QvRE8/fAXHLkjxL7LxhGKjPyDRNM=
-github.com/go-snart/db v0.7.1/go.mod h1:hP733SXY6AJRRdwHbDoc6BYflETosmFcxfS2kxRe/70=
+github.com/go-snart/db v0.7.2 h1:zI0ZuN7k2nbLdxSWWbhwzT9XS50W6GmP508aiKw/KGI=
+github.com/go-snart/db v0.7.2/go.mod h1:hP733SXY6AJRRdwHbDoc6BYflETosmFcxfS2kxRe/70=
 github.com/gorilla/schema v1.2.0 h1:YufUaxZYCKGFuAq3c96BOhjgd5nmXiOY9NGzF247Tsc=
 github.com/gorilla/schema v1.2.0/go.mod h1:kgLaKoK1FELgZqMAVxx/5cbj0kT+57qxUrAlIO2eleU=
 github.com/gorilla/websocket v1.4.2 h1:+/TMaTYc4QFitKJxsQ7Yye35DkWvkdLcvGKqM+x0Ufc=

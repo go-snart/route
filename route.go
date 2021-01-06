@@ -14,8 +14,13 @@ import (
 	"github.com/go-snart/db"
 )
 
-// RouteCat is the category name for internal Commands.
-const RouteCat = "route"
+const (
+	// RouteCat is the category name for internal Commands.
+	RouteCat = "route"
+
+	// RouteTable is the table name for getting Settings.
+	RouteTable = "route"
+)
 
 // Route handles storing and looking up routes.
 type Route struct {
@@ -29,7 +34,7 @@ type Route struct {
 // New makes an empty Route from the given DB and Session.
 func New(d *db.DB, s *state.State) *Route {
 	r := &Route{
-		DB:    d,
+		DB:    d.Table(RouteTable),
 		State: s,
 		Fill:  ff.New(),
 		Cats:  make(map[string][]*Command),

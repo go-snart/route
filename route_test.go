@@ -1,7 +1,6 @@
 package route_test
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"testing"
@@ -11,7 +10,6 @@ import (
 	"github.com/diamondburned/arikawa/v2/utils/httputil"
 	"github.com/mavolin/dismock/v2/pkg/dismock"
 
-	"github.com/go-snart/db"
 	"github.com/go-snart/route"
 )
 
@@ -42,16 +40,8 @@ type testFlags struct {
 	Run string `default:"run" usage:"run string"`
 }
 
-func testDB() *db.DB {
-	const uri = "mem://"
-
-	d, err := db.Open(uri)
-	if err != nil {
-		err = fmt.Errorf("open %q: %w", uri, err)
-		panic(err)
-	}
-
-	return d
+var testSettings = route.Settings{
+	Prefix: "//",
 }
 
 func testFunc(run *string) route.Func {
@@ -64,65 +54,72 @@ func testFunc(run *string) route.Func {
 
 func TestNew(t *testing.T) {
 	m, s := dismock.NewState(t)
-	d := testDB()
-	r := route.New(d, s)
+	r := route.New(testSettings, s)
 
 	if r.State != s {
 		t.Errorf("expect %v\ngot %v", s, r.State)
-	}
-
-	tb := d.Table(route.RouteTable)
-	if r.DB.String() != tb.String() {
-		t.Errorf("expect %q\ngot %q", tb, r.DB)
 	}
 
 	m.Eval()
 }
 
 func TestAdd(t *testing.T) {
-	r := route.New(testDB(), nil)
+	r := route.New(testSettings, nil)
 
 	c, _ := testCmd()
+	r.Add(c)
 
-	r.Add(testCat, c)
-
-	cmds := r.Cats[testCat]
-
-	if len(cmds) != 1 {
-		t.Errorf("expect: 1\ngot %d", len(cmds))
+	c2, ok := r.Commands[c.Name]
+	if !ok {
+		t.Error("!ok")
 	}
 
-	if cmds[0] != c {
-		t.Errorf("expect %v\ngot %v", c, cmds[0])
+	if c2.Cat != c.Cat {
+		t.Errorf("expect cat %#v, got %#v", c.Cat, c2.Cat)
+	}
+
+	if c2.Desc != c.Desc {
+		t.Errorf("expect desc %#v, got %#v", c.Desc, c2.Desc)
+	}
+
+	if c2.Flags != c.Flags {
+		t.Errorf("expect flags %#v, got %#v", c.Flags, c2.Flags)
+	}
+
+	if c2.Hide != c.Hide {
+		t.Errorf("expect hide %#v, got %#v", c.Hide, c2.Hide)
+	}
+
+	if c2.Name != c.Name {
+		t.Errorf("expect name %#v, got %#v", c.Name, c2.Name)
 	}
 }
 
-func TestHandleIgnoreSelf(t *testing.T) {
+func TestHandleIgnoreBot(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
-
-	m.Me(testMe)
+	r := route.New(testSettings, s)
 
 	r.Handle(&gateway.MessageCreateEvent{
 		Message: discord.Message{
-			Author: testMe,
+			Author: discord.User{
+				Bot: true,
+			},
 		},
 	})
 
 	m.Eval()
 }
 
-func TestHandleIgnoreBot(t *testing.T) {
+func TestHandleIgnoreSelf(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
+	r := route.New(testSettings, s)
 
 	m.Me(testMe)
 
 	r.Handle(&gateway.MessageCreateEvent{
 		Message: discord.Message{
 			Author: discord.User{
-				ID:  999,
-				Bot: true,
+				ID: testMe.ID,
 			},
 		},
 	})
@@ -132,7 +129,7 @@ func TestHandleIgnoreBot(t *testing.T) {
 
 func TestHandleNoPrefix(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
+	r := route.New(testSettings, s)
 
 	const guild = 123
 
@@ -154,7 +151,7 @@ func TestHandleNoPrefix(t *testing.T) {
 
 func TestHandleCommandNotFound(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
+	r := route.New(testSettings, s)
 
 	const guild = 123
 
@@ -176,14 +173,14 @@ func TestHandleCommandNotFound(t *testing.T) {
 
 func TestHandleRunError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
+	r := route.New(testSettings, s)
 
 	c, _ := testCmd()
 	c.Func = func(*route.Trigger) error {
 		return io.EOF
 	}
 
-	r.Add(testCat, c)
+	r.Add(c)
 
 	const guild = 123
 
@@ -205,11 +202,11 @@ func TestHandleRunError(t *testing.T) {
 
 func TestHandle(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
+	r := route.New(testSettings, s)
 
 	c, run := testCmd()
 
-	r.Add(testCat, c)
+	r.Add(c)
 
 	const guild = 123
 
@@ -237,11 +234,11 @@ func TestHandle(t *testing.T) {
 
 func TestHandleMeError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
+	r := route.New(testSettings, s)
 
 	c, run := testCmd()
 
-	r.Add(testCat, c)
+	r.Add(c)
 
 	const guild = 123
 

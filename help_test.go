@@ -11,23 +11,14 @@ import (
 
 func TestHelp(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
+	r := route.New(testSettings, s)
 
-	const emptyCat = "abc"
-
-	r.Cats[emptyCat] = nil
-
-	c := r.Cats["route"][0]
+	c := r.Commands["help"]
 
 	const (
 		guild   = 1234567890
 		channel = 1234567890
 	)
-
-	pfx := &route.Prefix{
-		Value: "//",
-		Clean: "//",
-	}
 
 	m.Me(testMe)
 	m.Member(guild, testMMe)
@@ -40,24 +31,68 @@ func TestHelp(t *testing.T) {
 				Text: "use the `-help` flag on a command for detailed help",
 			},
 			Fields: []discord.EmbedField{{
-				Name:  emptyCat,
-				Value: "*no commands*",
-			}, {
-				Name:  route.RouteCat,
+				Name:  route.CatBuiltin,
 				Value: "`//help`: *a help menu*",
 			}},
 		}},
 	})
 
 	err := c.Func(&route.Trigger{
-		Route:   r,
+		Router:  r,
 		Command: c,
 
 		Message: discord.Message{
 			GuildID:   guild,
 			ChannelID: channel,
 		},
-		Prefix: pfx,
+		Prefix: testPfx,
+		Flags: route.HelpFlags{
+			Help: false,
+		},
+	})
+	if err != nil {
+		t.Errorf("help: %s", err)
+	}
+
+	m.Eval()
+}
+
+func TestHelpHide(t *testing.T) {
+	m, s := dismock.NewState(t)
+	r := route.New(testSettings, s)
+
+	c := r.Commands["help"]
+	c.Hide = true
+	r.Commands["help"] = c
+
+	const (
+		guild   = 1234567890
+		channel = 1234567890
+	)
+
+	m.Me(testMe)
+	m.Member(guild, testMMe)
+	m.SendEmbed(discord.Message{
+		ChannelID: channel,
+		Embeds: []discord.Embed{{
+			Title:       "User Help",
+			Description: "prefix: `//`",
+			Footer: &discord.EmbedFooter{
+				Text: "use the `-help` flag on a command for detailed help",
+			},
+			Fields: nil,
+		}},
+	})
+
+	err := c.Func(&route.Trigger{
+		Router:  r,
+		Command: c,
+
+		Message: discord.Message{
+			GuildID:   guild,
+			ChannelID: channel,
+		},
+		Prefix: testPfx,
 		Flags: route.HelpFlags{
 			Help: false,
 		},
@@ -71,9 +106,9 @@ func TestHelp(t *testing.T) {
 
 func TestHelpHelpception(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
+	r := route.New(testSettings, s)
 
-	c := r.Cats["route"][0]
+	c := r.Commands["help"]
 
 	const channel = 1234567890
 
@@ -83,7 +118,7 @@ func TestHelpHelpception(t *testing.T) {
 	})
 
 	err := c.Func(&route.Trigger{
-		Route:   r,
+		Router:  r,
 		Command: c,
 
 		Message: discord.Message{
@@ -102,9 +137,9 @@ func TestHelpHelpception(t *testing.T) {
 
 func TestHelpUsage(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
+	r := route.New(testSettings, s)
 
-	c := r.Cats["route"][0]
+	c := r.Commands["help"]
 
 	const channel = 1234567890
 
@@ -123,7 +158,7 @@ func TestHelpUsage(t *testing.T) {
 	})
 
 	err := c.Func(&route.Trigger{
-		Route:   r,
+		Router:  r,
 		Command: c,
 
 		Message: discord.Message{
@@ -145,9 +180,9 @@ func TestHelpUsage(t *testing.T) {
 
 func TestHelpUsageUnknown(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
+	r := route.New(testSettings, s)
 
-	c := r.Cats["route"][0]
+	c := r.Commands["help"]
 
 	const channel = 1234567890
 
@@ -157,7 +192,7 @@ func TestHelpUsageUnknown(t *testing.T) {
 	})
 
 	err := c.Func(&route.Trigger{
-		Route:   r,
+		Router:  r,
 		Command: c,
 
 		Message: discord.Message{

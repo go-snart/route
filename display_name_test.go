@@ -1,6 +1,7 @@
 package route_test
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -13,10 +14,10 @@ import (
 
 func TestDisplayNameNullMeError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
+	r := route.New(testSettings, s)
 
 	tr := &route.Trigger{
-		Route: r,
+		Router: r,
 		Message: discord.Message{
 			GuildID: discord.NullGuildID,
 		},
@@ -24,8 +25,7 @@ func TestDisplayNameNullMeError(t *testing.T) {
 
 	m.Error(http.MethodGet, "/users/@me", httputil.HTTPError{Status: 404})
 
-	dn := tr.DisplayName()
-	if dn != route.DefaultDisplayName {
+	if dn := tr.DisplayName(); dn != route.DefaultDisplayName {
 		t.Errorf("expect %q\ngot %q", route.DefaultDisplayName, dn)
 	}
 
@@ -34,10 +34,10 @@ func TestDisplayNameNullMeError(t *testing.T) {
 
 func TestDisplayNameNull(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
+	r := route.New(testSettings, s)
 
 	tr := &route.Trigger{
-		Route: r,
+		Router: r,
 		Message: discord.Message{
 			GuildID: discord.NullGuildID,
 		},
@@ -45,8 +45,7 @@ func TestDisplayNameNull(t *testing.T) {
 
 	m.Me(testMe)
 
-	dn := tr.DisplayName()
-	if dn != testMe.Username {
+	if dn := tr.DisplayName(); dn != testMe.Username {
 		t.Errorf("expect %q\ngot %q", testMe.Username, dn)
 	}
 
@@ -55,16 +54,25 @@ func TestDisplayNameNull(t *testing.T) {
 
 func TestDisplayNameMMeError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
+	r := route.New(testSettings, s)
+
+	const guild = 1234567890
 
 	tr := &route.Trigger{
-		Route: r,
+		Router: r,
+		Message: discord.Message{
+			GuildID: guild,
+		},
 	}
 
-	m.Error(http.MethodGet, "/users/@me", httputil.HTTPError{Status: 404})
+	m.Me(testMe)
+	m.Error(
+		http.MethodGet,
+		fmt.Sprintf("/guilds/%d/members/%d", guild, testMe.ID),
+		httputil.HTTPError{Status: 404},
+	)
 
-	dn := tr.DisplayName()
-	if dn != route.DefaultDisplayName {
+	if dn := tr.DisplayName(); dn != route.DefaultDisplayName {
 		t.Errorf("expect %q\ngot %q", route.DefaultDisplayName, dn)
 	}
 
@@ -73,10 +81,10 @@ func TestDisplayNameMMeError(t *testing.T) {
 
 func TestDisplayNameMMeNick(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
+	r := route.New(testSettings, s)
 
 	tr := &route.Trigger{
-		Route: r,
+		Router: r,
 		Message: discord.Message{
 			GuildID: 123,
 		},
@@ -85,8 +93,7 @@ func TestDisplayNameMMeNick(t *testing.T) {
 	m.Me(testMe)
 	m.Member(tr.Message.GuildID, testMMeNick)
 
-	dn := tr.DisplayName()
-	if dn != testMMeNick.Nick {
+	if dn := tr.DisplayName(); dn != testMMeNick.Nick {
 		t.Errorf("expect %q\ngot %q", testMMeNick.Nick, dn)
 	}
 
@@ -95,10 +102,10 @@ func TestDisplayNameMMeNick(t *testing.T) {
 
 func TestDisplayNameMMeUser(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
+	r := route.New(testSettings, s)
 
 	tr := &route.Trigger{
-		Route: r,
+		Router: r,
 		Message: discord.Message{
 			GuildID: 123,
 		},
@@ -107,8 +114,7 @@ func TestDisplayNameMMeUser(t *testing.T) {
 	m.Me(testMe)
 	m.Member(tr.Message.GuildID, testMMe)
 
-	dn := tr.DisplayName()
-	if dn != testMe.Username {
+	if dn := tr.DisplayName(); dn != testMe.Username {
 		t.Errorf("expect %q\ngot %q", testMe.Username, dn)
 	}
 

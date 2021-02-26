@@ -8,27 +8,31 @@ import (
 	"github.com/diamondburned/arikawa/v2/discord"
 )
 
+// CatBuiltin is the category for builtin commands.
+const CatBuiltin = "builtin"
+
 // HelpFlags is flags for Help.
 type HelpFlags struct {
 	Help bool `default:"false" usage:"helpception"`
 }
 
 // HelpCommand makes the Route's help menu Command.
-func (r *Route) HelpCommand() *Command {
-	return &Command{
-		Name:  "help",
-		Desc:  "a help menu",
-		Func:  r.Help,
-		Hide:  false,
-		Flags: HelpFlags{},
+func (r *Route) HelpCommand() Command {
+	return Command{
+		Name: "help",
+		Desc: "a help menu",
+		Cat:  CatBuiltin,
+		Func: r.Help,
+		Hide: false,
+		Flags: HelpFlags{
+			Help: false,
+		},
 	}
 }
 
 // Help is a Func that provides a help menu.
 func (r *Route) Help(t *Trigger) error {
-	flags := t.Flags.(HelpFlags)
-
-	if flags.Help {
+	if t.Flags.(HelpFlags).Help {
 		rep := t.Reply()
 		rep.Content = "helpception :thinking:"
 
@@ -44,17 +48,19 @@ func (r *Route) Help(t *Trigger) error {
 	}
 
 	rep := t.Reply()
-
-	//nolint:exhaustivestruct // discord types are excessive
 	rep.Embed = &discord.Embed{
 		Title:       fmt.Sprintf("%s Help", t.DisplayName()),
 		Description: fmt.Sprintf("prefix: `%s`", t.Prefix.Clean),
 	}
 
-	for _, name := range r.CatNames() {
-		helps := []string(nil)
+	cats, catNames := r.cats()
 
-		for _, cmd := range r.Cats[name] {
+	for _, catName := range catNames {
+		cmds := cats[catName]
+		helps := make([]string, 0, len(cmds))
+
+		for _, cmdName := range cmds {
+			cmd := r.Commands[cmdName]
 			helps = append(helps, fmt.Sprintf(
 				"`%s%s`: *%s*",
 				t.Prefix.Clean, cmd.Name,
@@ -62,18 +68,12 @@ func (r *Route) Help(t *Trigger) error {
 			))
 		}
 
-		if len(helps) == 0 {
-			helps = append(helps, "*no commands*")
-		}
-
 		rep.Embed.Fields = append(rep.Embed.Fields, discord.EmbedField{
-			Name:   name,
-			Value:  strings.Join(helps, "\n"),
-			Inline: false,
+			Name:  catName,
+			Value: strings.Join(helps, "\n"),
 		})
 	}
 
-	//nolint:exhaustivestruct // discord types are excessive
 	rep.Embed.Footer = &discord.EmbedFooter{
 		Text: "use the `-help` flag on a command for detailed help",
 	}
@@ -81,33 +81,32 @@ func (r *Route) Help(t *Trigger) error {
 	return rep.Send()
 }
 
-// CatNames returns the category names, sorted.
-func (r *Route) CatNames() []string {
-	cats := make([]string, 0, len(r.Cats))
+func (r *Route) cats() (cats map[string][]string, catNames []string) {
+	cats = make(map[string][]string)
 
-	for cat := range r.Cats {
-		cats = append(cats, cat)
+	for _, c := range r.Commands {
+		if c.Hide {
+			continue
+		}
+
+		cats[c.Cat] = append(cats[c.Cat], c.Name)
 	}
 
-	sort.Strings(cats)
+	catNames = make([]string, 0, len(cats))
 
-	return cats
+	for name := range cats {
+		sort.Strings(cats[name])
+		catNames = append(catNames, name)
+	}
+
+	sort.Strings(catNames)
+
+	return
 }
 
 func (r *Route) runHelp(t *Trigger, name string) {
-	cmd := (*Command)(nil)
-
-	for _, cmds := range t.Route.Cats {
-		for _, c := range cmds {
-			if c.Name == name {
-				cmd = c
-
-				break
-			}
-		}
-	}
-
-	if cmd == nil {
+	cmd, ok := t.Router.Commands[name]
+	if !ok {
 		rep := t.Reply()
 		rep.Content = fmt.Sprintf("command `%s` not known", name)
 		_ = rep.Send()
@@ -116,9 +115,7 @@ func (r *Route) runHelp(t *Trigger, name string) {
 	}
 
 	(&Trigger{
-		Route: t.Route,
-		MMe:   nil,
-		//nolint:exhaustivestruct // discord types are excessive
+		Router: t.Router,
 		Message: discord.Message{
 			ChannelID: t.Message.ChannelID,
 		},

@@ -13,6 +13,7 @@ type Func = func(*Trigger) error
 type Command struct {
 	Name  string
 	Desc  string
+	Cat   string
 	Func  Func
 	Hide  bool
 	Flags interface{}

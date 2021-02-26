@@ -10,12 +10,13 @@ import (
 	"github.com/go-snart/route"
 )
 
-func testCmd() (*route.Command, *string) {
+func testCmd() (route.Command, *string) {
 	run := ""
 
-	return &route.Command{
+	return route.Command{
 		Name:  testName,
 		Desc:  testDesc,
+		Cat:   testCat,
 		Func:  testFunc(&run),
 		Hide:  false,
 		Flags: testFlags{},
@@ -35,7 +36,7 @@ func TestTidyDesc(t *testing.T) {
 
 func TestTidyFunc(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testDB(), s)
+	r := route.New(testSettings, s)
 
 	c, _ := testCmd()
 	c.Func = nil
@@ -54,7 +55,7 @@ func TestTidyFunc(t *testing.T) {
 	})
 
 	err := c.Func(&route.Trigger{
-		Route: r,
+		Router: r,
 		Message: discord.Message{
 			ChannelID: channel,
 		},

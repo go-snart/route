@@ -1,6 +1,7 @@
 package route_test
 
 import (
+	"log"
 	"testing"
 
 	"github.com/diamondburned/arikawa/v2/discord"
@@ -11,7 +12,7 @@ import (
 
 func TestHelp(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
+	r := route.New(testGuild, s)
 
 	c, _ := r.GetCmd("help")
 
@@ -31,14 +32,14 @@ func TestHelp(t *testing.T) {
 				Text: "use the `-help` flag on a command for detailed help",
 			},
 			Fields: []discord.EmbedField{{
-				Name:  route.CatBuiltin,
+				Name:  "help",
 				Value: "`//help`: *a help menu*",
 			}},
 		}},
 	})
 
 	err := c.Func(&route.Trigger{
-		Router:  r,
+		Route:   r,
 		Command: c,
 
 		Message: discord.Message{
@@ -57,7 +58,7 @@ func TestHelp(t *testing.T) {
 
 func TestHelpHide(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
+	r := route.New(testGuild, s)
 
 	c, _ := r.GetCmd("help")
 	r.DelCmd("help")
@@ -87,7 +88,7 @@ func TestHelpHide(t *testing.T) {
 	})
 
 	err := c.Func(&route.Trigger{
-		Router:  r,
+		Route:   r,
 		Command: c,
 
 		Message: discord.Message{
@@ -106,7 +107,7 @@ func TestHelpHide(t *testing.T) {
 
 func TestHelpHelpception(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
+	r := route.New(testGuild, s)
 
 	c, _ := r.GetCmd("help")
 
@@ -118,7 +119,7 @@ func TestHelpHelpception(t *testing.T) {
 	})
 
 	err := c.Func(&route.Trigger{
-		Router:  r,
+		Route:   r,
 		Command: c,
 
 		Message: discord.Message{
@@ -137,9 +138,7 @@ func TestHelpHelpception(t *testing.T) {
 
 func TestHelpUsage(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
-
-	c, _ := r.GetCmd("help")
+	r := route.New(testGuild, s)
 
 	const channel = 1234567890
 
@@ -157,22 +156,27 @@ func TestHelpUsage(t *testing.T) {
 		ChannelID: channel,
 	})
 
-	err := c.Func(&route.Trigger{
-		Router:  r,
-		Command: c,
+	const line = ".help help"
 
-		Message: discord.Message{
+	tr, err := r.Trigger(
+		route.Prefix{
+			Value: ".",
+		},
+		discord.Message{
 			ChannelID: channel,
 		},
-		Flags: route.HelpFlags{
-			Help: false,
-		},
-		Args: []string{
-			"help",
-		},
-	})
+		line,
+	)
 	if err != nil {
-		t.Errorf("help: %s", err)
+		t.Errorf("get trigger %q: %s", line, err)
+	}
+
+	log.Printf("%#v", tr)
+	log.Printf("%#v", tr.FlagSet)
+
+	err = tr.Command.Func(tr)
+	if err != nil {
+		t.Errorf("tr run: %s", err)
 	}
 
 	m.Eval()
@@ -180,7 +184,7 @@ func TestHelpUsage(t *testing.T) {
 
 func TestHelpUsageUnknown(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
+	r := route.New(testGuild, s)
 
 	c, _ := r.GetCmd("help")
 
@@ -192,7 +196,7 @@ func TestHelpUsageUnknown(t *testing.T) {
 	})
 
 	err := c.Func(&route.Trigger{
-		Router:  r,
+		Route:   r,
 		Command: c,
 
 		Message: discord.Message{

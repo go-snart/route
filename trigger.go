@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"reflect"
 	"strings"
 
@@ -33,7 +32,7 @@ type Func = func(*Trigger) error
 
 // Trigger holds the context that triggered a Command.
 type Trigger struct {
-	Router  *Route
+	Route   *Route
 	Message discord.Message
 	Prefix  Prefix
 	Command Cmd
@@ -46,7 +45,7 @@ type Trigger struct {
 // Trigger gets a Trigger by finding an appropriate Command for a given prefix, message, and line.
 func (r *Route) Trigger(pfx Prefix, m discord.Message, line string) (*Trigger, error) {
 	t := &Trigger{
-		Router:  r,
+		Route:   r,
 		Message: m,
 		Prefix:  pfx,
 		Command: Cmd{},
@@ -104,23 +103,10 @@ func (t *Trigger) fillFlagSet() (reflect.Value, error) {
 // Usage is the help flag handler for the Trigger.
 func (t *Trigger) Usage() {
 	rep := t.Reply()
-
-	if t.Output.Len() > 0 {
-		rep.Content = t.Output.String()
-	}
-
+	rep.Content = t.Output.String()
 	rep.Embed = &discord.Embed{
 		Title:       fmt.Sprintf("`%s` usage", t.Command.Name),
 		Description: t.Command.Desc,
-	}
-
-	if t.FlagSet == nil {
-		_, err := t.fillFlagSet()
-		if err != nil {
-			log.Printf("error: usage fill flagset: %s", err)
-
-			return
-		}
 	}
 
 	t.FlagSet.VisitAll(func(f *flag.Flag) {
@@ -155,7 +141,7 @@ func (t *Trigger) Reply() *Reply {
 
 // SendMsg sends the Reply.
 func (r *Reply) SendMsg() (*discord.Message, error) {
-	return r.Trigger.Router.State.SendMessageComplex(r.Trigger.Message.ChannelID, r.SendMessageData)
+	return r.Trigger.Route.State.SendMessageComplex(r.Trigger.Message.ChannelID, r.SendMessageData)
 }
 
 // Send is a shortcut for SendMsg elides the resulting message.

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/diamondburned/arikawa/v2/discord"
@@ -19,7 +18,7 @@ var testPfx = route.Prefix{
 }
 
 func TestTrigger(t *testing.T) {
-	r := route.New(testSettings, nil)
+	r := route.New(testGuild, nil)
 
 	c, _ := testCmd()
 
@@ -44,7 +43,7 @@ func TestTrigger(t *testing.T) {
 }
 
 func TestTriggerErrNoCmd(t *testing.T) {
-	r := route.New(testSettings, nil)
+	r := route.New(testGuild, nil)
 
 	c, _ := testCmd()
 
@@ -63,7 +62,7 @@ func TestTriggerErrNoCmd(t *testing.T) {
 }
 
 func TestTriggerErrCmdNotFound(t *testing.T) {
-	r := route.New(testSettings, nil)
+	r := route.New(testGuild, nil)
 
 	c, _ := testCmd()
 	r.AddCmd(c)
@@ -82,7 +81,7 @@ func TestTriggerErrCmdNotFound(t *testing.T) {
 
 func TestTriggerUsage(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
+	r := route.New(testGuild, s)
 
 	c, _ := testCmd()
 	r.AddCmd(c)
@@ -123,30 +122,12 @@ func TestTriggerUsage(t *testing.T) {
 	m.Eval()
 }
 
-func TestTriggerUsageNoDesc(t *testing.T) {
-	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
-
-	defer func() {
-		const expect = "cmd \"cmd\" desc is missing"
-		if recv := fmt.Sprint(recover()); recv != expect {
-			t.Errorf("expect panic %q, got %q", expect, recv)
-		}
-	}()
-
-	c, _ := testCmd()
-	c.Desc = ""
-	r.AddCmd(c)
-
-	m.Eval()
-}
-
 func TestTriggerNoFlags(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
+	r := route.New(testGuild, s)
 
 	defer func() {
-		const expect = "cmd \"cmd\" flags is missing"
+		const expect = "cmd \"cmd\" missing field Flags"
 		if recv := fmt.Sprint(recover()); recv != expect {
 			t.Errorf("expect panic %q, got %q", expect, recv)
 		}
@@ -161,7 +142,7 @@ func TestTriggerNoFlags(t *testing.T) {
 
 func TestReplySendErr(t *testing.T) {
 	_, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
+	r := route.New(testGuild, s)
 
 	c, _ := testCmd()
 	r.AddCmd(c)
@@ -190,7 +171,7 @@ func TestReplySendErr(t *testing.T) {
 }
 
 func TestTriggerRun(t *testing.T) {
-	r := route.New(testSettings, nil)
+	r := route.New(testGuild, nil)
 
 	c, run := testCmd()
 	r.AddCmd(c)
@@ -221,25 +202,24 @@ func TestTriggerRun(t *testing.T) {
 	}
 }
 
-func TestTriggerUsageFillError(t *testing.T) {
+func TestTriggerFillError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
+	r := route.New(testGuild, s)
 
 	c, _ := testCmd()
 	c.Flags = (func())(nil)
+	r.AddCmd(c)
 
 	const channel = 1234567890
 
-	(&route.Trigger{
-		Router:  r,
-		Command: c,
+	line := testPfx.Value + c.Name
 
-		Message: discord.Message{
-			ChannelID: channel,
-		},
-		Prefix: testPfx,
-		Output: &strings.Builder{},
-	}).Usage()
+	_, err := r.Trigger(testPfx, discord.Message{
+		ChannelID: channel,
+	}, line)
+	if err == nil {
+		t.Errorf("expect err, got nil")
+	}
 
 	m.Eval()
 }

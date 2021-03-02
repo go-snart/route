@@ -14,10 +14,10 @@ import (
 
 func TestDisplayNameNullMeError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
+	r := route.New(testGuild, s)
 
 	tr := &route.Trigger{
-		Router: r,
+		Route: r,
 		Message: discord.Message{
 			GuildID: discord.NullGuildID,
 		},
@@ -34,10 +34,10 @@ func TestDisplayNameNullMeError(t *testing.T) {
 
 func TestDisplayNameNull(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
+	r := route.New(testGuild, s)
 
 	tr := &route.Trigger{
-		Router: r,
+		Route: r,
 		Message: discord.Message{
 			GuildID: discord.NullGuildID,
 		},
@@ -54,12 +54,12 @@ func TestDisplayNameNull(t *testing.T) {
 
 func TestDisplayNameMMeError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
+	r := route.New(testGuild, s)
 
 	const guild = 1234567890
 
 	tr := &route.Trigger{
-		Router: r,
+		Route: r,
 		Message: discord.Message{
 			GuildID: guild,
 		},
@@ -81,10 +81,10 @@ func TestDisplayNameMMeError(t *testing.T) {
 
 func TestDisplayNameMMeNick(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
+	r := route.New(testGuild, s)
 
 	tr := &route.Trigger{
-		Router: r,
+		Route: r,
 		Message: discord.Message{
 			GuildID: 123,
 		},
@@ -102,10 +102,10 @@ func TestDisplayNameMMeNick(t *testing.T) {
 
 func TestDisplayNameMMeUser(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
+	r := route.New(testGuild, s)
 
 	tr := &route.Trigger{
-		Router: r,
+		Route: r,
 		Message: discord.Message{
 			GuildID: 123,
 		},

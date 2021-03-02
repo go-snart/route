@@ -1,8 +1,8 @@
 package route
 
 import (
-	"bytes"
 	"log"
+	"reflect"
 	"unicode"
 )
 
@@ -16,45 +16,20 @@ type Cmd struct {
 	Flags interface{}
 }
 
-func toAlNum(s string) string {
-	b := bytes.NewBuffer(make([]byte, 0, len(s)))
-
-	for _, r := range s {
-		if unicode.IsLower(r) || unicode.IsNumber(r) {
-			b.WriteRune(r)
+// AddCmd adds a Cmd to the Route.
+func (r *Route) AddCmd(c Cmd) {
+	for _, r := range c.Name {
+		if !unicode.IsLower(r) && !unicode.IsNumber(r) {
+			log.Panicf("cmd name %q not alphanumeric", c.Name)
 		}
 	}
 
-	return b.String()
-}
-
-// AddCmd adds a Cmd to the Route.
-func (r *Route) AddCmd(c Cmd) {
-	name := toAlNum(c.Name)
-	if name != c.Name {
-		log.Printf("truncating cmd name %q to %q", c.Name, name)
-	}
-
-	c.Name = name
-
-	if c.Name == "" {
-		log.Panicf("cmd name is missing")
-	}
-
-	if c.Desc == "" {
-		log.Panicf("cmd %q desc is missing", c.Name)
-	}
-
-	if c.Cat == "" {
-		log.Panicf("cmd %q cat is missing", c.Name)
-	}
-
-	if c.Func == nil {
-		log.Panicf("cmd %q func is missing", c.Name)
-	}
-
-	if c.Flags == nil {
-		log.Panicf("cmd %q flags is missing", c.Name)
+	val := reflect.ValueOf(c)
+	for i := 0; i < val.NumField(); i++ {
+		f := val.Field(i)
+		if f.IsZero() && f.Type().Kind() != reflect.Bool {
+			log.Panicf("cmd %q missing field %s", c.Name, val.Type().Field(i).Name)
+		}
 	}
 
 	if _, ok := r.GetCmd(c.Name); ok {

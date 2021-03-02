@@ -1,37 +1,35 @@
 package route
 
 import (
+	"flag"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 
 	"github.com/diamondburned/arikawa/v2/discord"
 )
 
-// CatBuiltin is the category for builtin commands.
-const CatBuiltin = "builtin"
-
 // HelpFlags is flags for Help.
 type HelpFlags struct {
 	Help bool `default:"false" usage:"helpception"`
 }
 
-// HelpCommand makes the Route's help menu Command.
-func (r *Route) HelpCommand() Cmd {
-	return Cmd{
-		Name: "help",
-		Desc: "a help menu",
-		Cat:  CatBuiltin,
-		Func: r.Help,
-		Hide: false,
-		Flags: HelpFlags{
-			Help: false,
-		},
-	}
+//nolint:gochecknoglobals // useful global
+// HelpCmd is a Cmd providing a help menu.
+var HelpCmd = Cmd{
+	Name: "help",
+	Desc: "a help menu",
+	Cat:  "help",
+	Func: HelpFunc,
+	Hide: false,
+	Flags: HelpFlags{
+		Help: false,
+	},
 }
 
-// Help is a Func that provides a help menu.
-func (r *Route) Help(t *Trigger) error {
+// HelpFunc is a Func that provides a help menu.
+func HelpFunc(t *Trigger) error {
 	if t.Flags.(HelpFlags).Help {
 		rep := t.Reply()
 		rep.Content = "helpception :thinking:"
@@ -41,7 +39,7 @@ func (r *Route) Help(t *Trigger) error {
 
 	if len(t.Args) > 0 {
 		for _, name := range t.Args {
-			r.runHelp(t, name)
+			t.runHelp(name)
 		}
 
 		return nil
@@ -53,14 +51,14 @@ func (r *Route) Help(t *Trigger) error {
 		Description: fmt.Sprintf("prefix: `%s`", t.Prefix.Clean),
 	}
 
-	cats, catNames := r.cats()
+	cats, catNames := t.Route.cats()
 
 	for _, catName := range catNames {
 		cmds := cats[catName]
 		helps := make([]string, 0, len(cmds))
 
 		for _, cmdName := range cmds {
-			cmd, _ := r.GetCmd(cmdName)
+			cmd, _ := t.Route.GetCmd(cmdName)
 			helps = append(helps, fmt.Sprintf(
 				"`%s%s`: *%s*",
 				t.Prefix.Clean, cmd.Name,
@@ -107,8 +105,8 @@ func (r *Route) cats() (cats map[string][]string, catNames []string) {
 	return
 }
 
-func (r *Route) runHelp(t *Trigger, name string) {
-	cmd, ok := t.Router.GetCmd(name)
+func (t *Trigger) runHelp(name string) {
+	cmd, ok := t.Route.GetCmd(name)
 	if !ok {
 		rep := t.Reply()
 		rep.Content = fmt.Sprintf("command `%s` not known", name)
@@ -117,16 +115,23 @@ func (r *Route) runHelp(t *Trigger, name string) {
 		return
 	}
 
-	(&Trigger{
-		Router: t.Router,
+	ht := &Trigger{
+		Route: t.Route,
 		Message: discord.Message{
 			ChannelID: t.Message.ChannelID,
 		},
 		Prefix:  t.Prefix,
 		Command: cmd,
-		FlagSet: nil,
+		FlagSet: flag.NewFlagSet(cmd.Name, flag.ContinueOnError),
 		Args:    nil,
 		Flags:   nil,
 		Output:  &strings.Builder{},
-	}).Usage()
+	}
+	if _, err := ht.fillFlagSet(); err != nil {
+		log.Printf("help trigger: fill flagset: %s", err)
+
+		return
+	}
+
+	ht.Usage()
 }

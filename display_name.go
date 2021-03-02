@@ -7,7 +7,7 @@ const DisplayName = "Snart"
 
 // DisplayName returns the State's display name for the given trigger.
 func (t *Trigger) DisplayName() string {
-	me, err := t.Router.State.Me()
+	me, err := t.Route.State.Me()
 	if err != nil {
 		log.Printf("error: get me: %s", err)
 
@@ -18,7 +18,7 @@ func (t *Trigger) DisplayName() string {
 		return me.Username
 	}
 
-	mme, err := t.Router.State.Member(t.Message.GuildID, me.ID)
+	mme, err := t.Route.State.Member(t.Message.GuildID, me.ID)
 	if err != nil {
 		log.Printf("error: get mme: %s", err)
 

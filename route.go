@@ -24,11 +24,11 @@ type Route struct {
 	cmdMap map[string]Cmd
 
 	setMu  *sync.RWMutex
-	setMap map[discord.GuildID]Settings
+	setMap map[discord.GuildID]Guild
 }
 
 // New makes an empty Route from the given Config and Session.
-func New(base Settings, s *state.State) *Route {
+func New(base Guild, s *state.State) *Route {
 	r := &Route{
 		State: s,
 
@@ -36,12 +36,12 @@ func New(base Settings, s *state.State) *Route {
 		cmdMap: map[string]Cmd{},
 
 		setMu: &sync.RWMutex{},
-		setMap: map[discord.GuildID]Settings{
-			BaseID: base,
+		setMap: map[discord.GuildID]Guild{
+			BaseGuild: base,
 		},
 	}
 
-	r.AddCmd(r.HelpCommand())
+	r.AddCmd(HelpCmd)
 
 	return r
 }
@@ -76,12 +76,12 @@ func (r *Route) Handle(m *gateway.MessageCreateEvent) {
 }
 
 func (r *Route) handleLine(m *gateway.MessageCreateEvent, line string, me discord.User, mme *discord.Member) error {
-	pfx := r.LinePrefix(m.GuildID, me, mme, line)
-	if pfx == nil {
+	pfx, ok := r.LinePrefix(m.GuildID, me, mme, line)
+	if !ok {
 		return ErrNoLinePrefix
 	}
 
-	t, err := r.Trigger(*pfx, m.Message, line)
+	t, err := r.Trigger(pfx, m.Message, line)
 	if err != nil {
 		return fmt.Errorf("get trigger: %w", err)
 	}

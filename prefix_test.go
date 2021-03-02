@@ -11,20 +11,20 @@ import (
 )
 
 func TestLinePrefixGuild(t *testing.T) {
-	r := route.New(testSettings, nil)
+	r := route.New(testGuild, nil)
 
 	const (
 		guild = 1234567890
 		pfxv  = "//"
 	)
 
-	r.SetSettings(guild, route.Settings{
+	r.SetGuild(guild, route.Guild{
 		Prefix: pfxv,
 	})
 
-	pfx := r.LinePrefix(guild, testMe, nil, pfxv)
+	pfx, _ := r.LinePrefix(guild, testMe, nil, pfxv)
 
-	expect := &route.Prefix{
+	expect := route.Prefix{
 		Value: pfxv,
 		Clean: pfxv,
 	}
@@ -37,14 +37,14 @@ func TestLinePrefixGuild(t *testing.T) {
 func TestLinePrefixBase(t *testing.T) {
 	const pfxv = "test!"
 
-	r := route.New(route.Settings{
+	r := route.New(route.Guild{
 		Prefix: pfxv,
 	}, nil)
 
 	const guild = 1234567890
 
-	pfx := r.LinePrefix(guild, testMe, nil, "test!uwu")
-	expect := &route.Prefix{
+	pfx, _ := r.LinePrefix(guild, testMe, nil, "test!uwu")
+	expect := route.Prefix{
 		Value: pfxv,
 		Clean: pfxv,
 	}
@@ -56,10 +56,10 @@ func TestLinePrefixBase(t *testing.T) {
 
 func TestLinePrefixUser(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
+	r := route.New(testGuild, s)
 
-	pfx := r.LinePrefix(discord.NullGuildID, testMe, nil, testMe.Mention())
-	expect := &route.Prefix{
+	pfx, _ := r.LinePrefix(discord.NullGuildID, testMe, nil, testMe.Mention())
+	expect := route.Prefix{
 		Value: testMe.Mention(),
 		Clean: "@User",
 	}
@@ -73,12 +73,12 @@ func TestLinePrefixUser(t *testing.T) {
 
 func TestLinePrefixMemberNick(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
+	r := route.New(testGuild, s)
 
 	const guild = 666
 
-	pfx := r.LinePrefix(guild, testMe, &testMMeNick, testMMeNick.Mention())
-	expect := &route.Prefix{
+	pfx, _ := r.LinePrefix(guild, testMe, &testMMeNick, testMMeNick.Mention())
+	expect := route.Prefix{
 		Value: testMMeNick.Mention(),
 		Clean: "@" + testMMeNick.Nick,
 	}
@@ -92,13 +92,13 @@ func TestLinePrefixMemberNick(t *testing.T) {
 
 func TestLinePrefixNil(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
+	r := route.New(testGuild, s)
 
 	const guild = 666
 
-	pfx := r.LinePrefix(guild, testMe, nil, "")
-	if pfx != nil {
-		t.Errorf("should be nil, got %#v", pfx)
+	pfx, ok := r.LinePrefix(guild, testMe, nil, "")
+	if ok {
+		t.Errorf("should be !ok, got %#v", pfx)
 	}
 
 	m.Eval()

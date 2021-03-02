@@ -18,9 +18,9 @@ func TestLinePrefixGuild(t *testing.T) {
 		pfxv  = "//"
 	)
 
-	r.Guilds[guild] = route.Settings{
+	r.SetSettings(guild, route.Settings{
 		Prefix: pfxv,
-	}
+	})
 
 	pfx := r.LinePrefix(guild, testMe, nil, pfxv)
 
@@ -34,19 +34,19 @@ func TestLinePrefixGuild(t *testing.T) {
 	}
 }
 
-func TestLinePrefixDefault(t *testing.T) {
-	r := route.New(testSettings, nil)
+func TestLinePrefixBase(t *testing.T) {
+	const pfxv = "test!"
+
+	r := route.New(route.Settings{
+		Prefix: pfxv,
+	}, nil)
 
 	const guild = 1234567890
 
-	r.Guilds[discord.NullGuildID] = route.Settings{
-		Prefix: "owo!",
-	}
-
-	pfx := r.LinePrefix(guild, testMe, nil, "owo!uwu")
+	pfx := r.LinePrefix(guild, testMe, nil, "test!uwu")
 	expect := &route.Prefix{
-		Value: "owo!",
-		Clean: "owo!",
+		Value: pfxv,
+		Clean: pfxv,
 	}
 
 	if !reflect.DeepEqual(pfx, expect) {

@@ -1,16 +1,13 @@
 package route
 
-// DefaultDesc is the default description used by Tidy.
-const DefaultDesc = "*no description*"
+import (
+	"bytes"
+	"log"
+	"unicode"
+)
 
-// UndefinedMsg is the message content sent by Undefined.
-const UndefinedMsg = "the behavior of this command is not yet defined."
-
-// Func is a handler for a Trigger.
-type Func = func(*Trigger) error
-
-// Command is a command.
-type Command struct {
+// Cmd is a command.
+type Cmd struct {
 	Name  string
 	Desc  string
 	Cat   string
@@ -19,25 +16,72 @@ type Command struct {
 	Flags interface{}
 }
 
-// Tidy fixes common issues with Command contents.
-func (c *Command) Tidy() {
+func toAlNum(s string) string {
+	b := bytes.NewBuffer(make([]byte, 0, len(s)))
+
+	for _, r := range s {
+		if unicode.IsLower(r) || unicode.IsNumber(r) {
+			b.WriteRune(r)
+		}
+	}
+
+	return b.String()
+}
+
+// AddCmd adds a Cmd to the Route.
+func (r *Route) AddCmd(c Cmd) {
+	name := toAlNum(c.Name)
+	if name != c.Name {
+		log.Printf("truncating cmd name %q to %q", c.Name, name)
+	}
+
+	c.Name = name
+
+	if c.Name == "" {
+		log.Panicf("cmd name is missing")
+	}
+
 	if c.Desc == "" {
-		c.Desc = DefaultDesc
+		log.Panicf("cmd %q desc is missing", c.Name)
+	}
+
+	if c.Cat == "" {
+		log.Panicf("cmd %q cat is missing", c.Name)
 	}
 
 	if c.Func == nil {
-		c.Func = Undefined
+		log.Panicf("cmd %q func is missing", c.Name)
 	}
 
 	if c.Flags == nil {
-		c.Flags = struct{}{}
+		log.Panicf("cmd %q flags is missing", c.Name)
 	}
+
+	if _, ok := r.GetCmd(c.Name); ok {
+		log.Panicf("cmd %q already exists", c.Name)
+	}
+
+	r.cmdMu.Lock()
+	defer r.cmdMu.Unlock()
+
+	r.cmdMap[c.Name] = c
 }
 
-// Undefined is a Func used when a Command's Func isn't defined.
-func Undefined(t *Trigger) error {
-	rep := t.Reply()
-	rep.Content = UndefinedMsg
+// GetCmd fetches a Cmd by name from the Route.
+// The bool indicates whether it was found.
+func (r *Route) GetCmd(name string) (Cmd, bool) {
+	r.cmdMu.RLock()
+	defer r.cmdMu.RUnlock()
 
-	return rep.Send()
+	c, ok := r.cmdMap[name]
+
+	return c, ok
+}
+
+// DelCmd removes a Cmd from the Route.
+func (r *Route) DelCmd(name string) {
+	r.cmdMu.Lock()
+	defer r.cmdMu.Unlock()
+
+	delete(r.cmdMap, name)
 }

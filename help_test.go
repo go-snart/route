@@ -13,7 +13,7 @@ func TestHelp(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testSettings, s)
 
-	c := r.Commands["help"]
+	c, _ := r.GetCmd("help")
 
 	const (
 		guild   = 1234567890
@@ -46,9 +46,7 @@ func TestHelp(t *testing.T) {
 			ChannelID: channel,
 		},
 		Prefix: testPfx,
-		Flags: route.HelpFlags{
-			Help: false,
-		},
+		Flags:  route.HelpFlags{},
 	})
 	if err != nil {
 		t.Errorf("help: %s", err)
@@ -61,9 +59,13 @@ func TestHelpHide(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testSettings, s)
 
-	c := r.Commands["help"]
+	c, _ := r.GetCmd("help")
+	r.DelCmd("help")
+	// copy and delete help
+
 	c.Hide = true
-	r.Commands["help"] = c
+	r.AddCmd(c)
+	// re-register as hidden
 
 	const (
 		guild   = 1234567890
@@ -93,9 +95,7 @@ func TestHelpHide(t *testing.T) {
 			ChannelID: channel,
 		},
 		Prefix: testPfx,
-		Flags: route.HelpFlags{
-			Help: false,
-		},
+		Flags:  route.HelpFlags{},
 	})
 	if err != nil {
 		t.Errorf("help: %s", err)
@@ -108,7 +108,7 @@ func TestHelpHelpception(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testSettings, s)
 
-	c := r.Commands["help"]
+	c, _ := r.GetCmd("help")
 
 	const channel = 1234567890
 
@@ -139,7 +139,7 @@ func TestHelpUsage(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testSettings, s)
 
-	c := r.Commands["help"]
+	c, _ := r.GetCmd("help")
 
 	const channel = 1234567890
 
@@ -182,7 +182,7 @@ func TestHelpUsageUnknown(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testSettings, s)
 
-	c := r.Commands["help"]
+	c, _ := r.GetCmd("help")
 
 	const channel = 1234567890
 

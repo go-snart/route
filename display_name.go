@@ -1,17 +1,17 @@
 package route
 
-import "github.com/go-snart/lob"
+import "log"
 
-// DefaultDisplayName is the default returned by DisplayName.
-const DefaultDisplayName = "Snart"
+// DisplayName is the default returned by DisplayName.
+const DisplayName = "Snart"
 
 // DisplayName returns the State's display name for the given trigger.
 func (t *Trigger) DisplayName() string {
 	me, err := t.Router.State.Me()
 	if err != nil {
-		_ = lob.Std.Error("get me: %w", err)
+		log.Printf("error: get me: %s", err)
 
-		return DefaultDisplayName
+		return DisplayName
 	}
 
 	if t.Message.GuildID.IsNull() {
@@ -20,9 +20,9 @@ func (t *Trigger) DisplayName() string {
 
 	mme, err := t.Router.State.Member(t.Message.GuildID, me.ID)
 	if err != nil {
-		_ = lob.Std.Error("get mme: %w", err)
+		log.Printf("error: get mme: %s", err)
 
-		return DefaultDisplayName
+		return DisplayName
 	}
 
 	if mme.Nick != "" {

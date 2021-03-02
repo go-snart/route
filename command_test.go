@@ -1,19 +1,13 @@
 package route_test
 
 import (
-	"reflect"
-	"testing"
-
-	"github.com/diamondburned/arikawa/v2/discord"
-	"github.com/mavolin/dismock/v2/pkg/dismock"
-
 	"github.com/go-snart/route"
 )
 
-func testCmd() (route.Command, *string) {
+func testCmd() (route.Cmd, *string) {
 	run := ""
 
-	return route.Command{
+	return route.Cmd{
 		Name:  testName,
 		Desc:  testDesc,
 		Cat:   testCat,
@@ -21,59 +15,4 @@ func testCmd() (route.Command, *string) {
 		Hide:  false,
 		Flags: testFlags{},
 	}, &run
-}
-
-func TestTidyDesc(t *testing.T) {
-	c, _ := testCmd()
-	c.Desc = ""
-
-	c.Tidy()
-
-	if c.Desc != route.DefaultDesc {
-		t.Errorf("expect %q, got %q", route.DefaultDesc, c.Desc)
-	}
-}
-
-func TestTidyFunc(t *testing.T) {
-	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
-
-	c, _ := testCmd()
-	c.Func = nil
-
-	c.Tidy()
-
-	if c.Func == nil {
-		t.Error("shouldn't be nil")
-	}
-
-	const channel = 1234567890
-
-	m.SendMessage(nil, discord.Message{
-		ChannelID: channel,
-		Content:   route.UndefinedMsg,
-	})
-
-	err := c.Func(&route.Trigger{
-		Router: r,
-		Message: discord.Message{
-			ChannelID: channel,
-		},
-	})
-	if err != nil {
-		t.Errorf("run func: %s", err)
-	}
-
-	m.Eval()
-}
-
-func TestTidyFlags(t *testing.T) {
-	c, _ := testCmd()
-	c.Flags = nil
-
-	c.Tidy()
-
-	if !reflect.DeepEqual(c.Flags, struct{}{}) {
-		t.Errorf("expect %#v, got %#v", struct{}{}, c.Flags)
-	}
 }

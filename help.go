@@ -17,8 +17,8 @@ type HelpFlags struct {
 }
 
 // HelpCommand makes the Route's help menu Command.
-func (r *Route) HelpCommand() Command {
-	return Command{
+func (r *Route) HelpCommand() Cmd {
+	return Cmd{
 		Name: "help",
 		Desc: "a help menu",
 		Cat:  CatBuiltin,
@@ -60,7 +60,7 @@ func (r *Route) Help(t *Trigger) error {
 		helps := make([]string, 0, len(cmds))
 
 		for _, cmdName := range cmds {
-			cmd := r.Commands[cmdName]
+			cmd, _ := r.GetCmd(cmdName)
 			helps = append(helps, fmt.Sprintf(
 				"`%s%s`: *%s*",
 				t.Prefix.Clean, cmd.Name,
@@ -82,14 +82,17 @@ func (r *Route) Help(t *Trigger) error {
 }
 
 func (r *Route) cats() (cats map[string][]string, catNames []string) {
+	r.cmdMu.RLock()
+	defer r.cmdMu.RUnlock()
+
 	cats = make(map[string][]string)
 
-	for _, c := range r.Commands {
+	for name, c := range r.cmdMap {
 		if c.Hide {
 			continue
 		}
 
-		cats[c.Cat] = append(cats[c.Cat], c.Name)
+		cats[c.Cat] = append(cats[c.Cat], name)
 	}
 
 	catNames = make([]string, 0, len(cats))
@@ -105,7 +108,7 @@ func (r *Route) cats() (cats map[string][]string, catNames []string) {
 }
 
 func (r *Route) runHelp(t *Trigger, name string) {
-	cmd, ok := t.Router.Commands[name]
+	cmd, ok := t.Router.GetCmd(name)
 	if !ok {
 		rep := t.Reply()
 		rep.Content = fmt.Sprintf("command `%s` not known", name)

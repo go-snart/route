@@ -2,47 +2,56 @@
 package route
 
 import (
+	"errors"
+	"fmt"
+	"log"
 	"strings"
+	"sync"
 
 	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/arikawa/v2/state"
 	ff "github.com/itzg/go-flagsfiller"
-
-	"github.com/go-snart/lob"
 )
+
+// ErrNoLinePrefix occurs when a line doesn't start with a valid prefix.
+var ErrNoLinePrefix = errors.New("no prefix in line")
 
 // Route handles storing and looking up Commands.
 type Route struct {
-	State    *state.State
-	Commands map[string]Command
-	Guilds   map[discord.GuildID]Settings
-	Filler   *ff.FlagSetFiller
+	State *state.State
+
+	cmdMu  *sync.RWMutex
+	cmdMap map[string]Cmd
+
+	setMu  *sync.RWMutex
+	setMap map[discord.GuildID]Settings
+
+	filler *ff.FlagSetFiller
 }
 
 // New makes an empty Route from the given Config and Session.
 func New(base Settings, s *state.State) *Route {
 	r := &Route{
-		State:    s,
-		Commands: map[string]Command{},
-		Guilds:   map[discord.GuildID]Settings{discord.NullGuildID: base},
-		Filler:   ff.New(),
+		State: s,
+
+		cmdMu:  &sync.RWMutex{},
+		cmdMap: map[string]Cmd{},
+
+		setMu: &sync.RWMutex{},
+		setMap: map[discord.GuildID]Settings{
+			BaseID: base,
+		},
+
+		filler: ff.New(),
 	}
 
-	r.Add(r.HelpCommand())
+	r.AddCmd(r.HelpCommand())
 
 	return r
 }
 
-// Add adds Commands to the Route.
-func (r *Route) Add(cmds ...Command) {
-	for _, c := range cmds {
-		c.Tidy()
-		r.Commands[c.Name] = c
-	}
-}
-
-// Handle returns a MessageCreate handler function for the Route.
+// Handle is a MessageCreate handler function for the Route.
 func (r *Route) Handle(m *gateway.MessageCreateEvent) {
 	if m.Author.Bot {
 		return
@@ -50,7 +59,7 @@ func (r *Route) Handle(m *gateway.MessageCreateEvent) {
 
 	me, err := r.State.Me()
 	if err != nil {
-		_ = lob.Std.Error("get me: %w", err)
+		log.Printf("error: get me: %s", err)
 
 		return
 	}
@@ -66,7 +75,7 @@ func (r *Route) Handle(m *gateway.MessageCreateEvent) {
 	for _, line := range lines {
 		err := r.handleLine(m, line, *me, mme)
 		if err != nil {
-			_ = lob.Std.Error("handle line %q: %w", line, err)
+			log.Printf("error: handle line %q: %s", line, err)
 		}
 	}
 }
@@ -74,17 +83,17 @@ func (r *Route) Handle(m *gateway.MessageCreateEvent) {
 func (r *Route) handleLine(m *gateway.MessageCreateEvent, line string, me discord.User, mme *discord.Member) error {
 	pfx := r.LinePrefix(m.GuildID, me, mme, line)
 	if pfx == nil {
-		return lob.Std.Error("no prefix")
+		return ErrNoLinePrefix
 	}
 
-	t, err := r.Trigger(pfx, m.Message, line)
+	t, err := r.Trigger(*pfx, m.Message, line)
 	if err != nil {
-		return lob.Std.Error("get trigger: %w", err)
+		return fmt.Errorf("get trigger: %w", err)
 	}
 
-	err = t.Run()
+	err = t.Command.Func(t)
 	if err != nil {
-		return lob.Std.Error("run trigger: %w", err)
+		return fmt.Errorf("run trigger: %w", err)
 	}
 
 	return nil

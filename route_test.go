@@ -67,9 +67,9 @@ func TestAdd(t *testing.T) {
 	r := route.New(testSettings, nil)
 
 	c, _ := testCmd()
-	r.Add(c)
+	r.AddCmd(c)
 
-	c2, ok := r.Commands[c.Name]
+	c2, ok := r.GetCmd(c.Name)
 	if !ok {
 		t.Error("!ok")
 	}
@@ -180,7 +180,7 @@ func TestHandleRunError(t *testing.T) {
 		return io.EOF
 	}
 
-	r.Add(c)
+	r.AddCmd(c)
 
 	const guild = 123
 
@@ -206,7 +206,7 @@ func TestHandle(t *testing.T) {
 
 	c, run := testCmd()
 
-	r.Add(c)
+	r.AddCmd(c)
 
 	const guild = 123
 
@@ -238,7 +238,7 @@ func TestHandleMeError(t *testing.T) {
 
 	c, run := testCmd()
 
-	r.Add(c)
+	r.AddCmd(c)
 
 	const guild = 123
 

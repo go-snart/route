@@ -25,8 +25,8 @@ func TestDisplayNameNullMeError(t *testing.T) {
 
 	m.Error(http.MethodGet, "/users/@me", httputil.HTTPError{Status: 404})
 
-	if dn := tr.DisplayName(); dn != route.DefaultDisplayName {
-		t.Errorf("expect %q\ngot %q", route.DefaultDisplayName, dn)
+	if dn := tr.DisplayName(); dn != route.DisplayName {
+		t.Errorf("expect %q\ngot %q", route.DisplayName, dn)
 	}
 
 	m.Eval()
@@ -72,8 +72,8 @@ func TestDisplayNameMMeError(t *testing.T) {
 		httputil.HTTPError{Status: 404},
 	)
 
-	if dn := tr.DisplayName(); dn != route.DefaultDisplayName {
-		t.Errorf("expect %q\ngot %q", route.DefaultDisplayName, dn)
+	if dn := tr.DisplayName(); dn != route.DisplayName {
+		t.Errorf("expect %q\ngot %q", route.DisplayName, dn)
 	}
 
 	m.Eval()

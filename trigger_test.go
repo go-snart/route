@@ -3,6 +3,7 @@ package route_test
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/go-snart/route"
 )
 
-var testPfx = &route.Prefix{
+var testPfx = route.Prefix{
 	Value: "//",
 	Clean: "//",
 }
@@ -22,7 +23,7 @@ func TestTrigger(t *testing.T) {
 
 	c, _ := testCmd()
 
-	r.Add(c)
+	r.AddCmd(c)
 
 	const line = "//cmd `-run=foo`"
 
@@ -47,7 +48,7 @@ func TestTriggerErrNoCmd(t *testing.T) {
 
 	c, _ := testCmd()
 
-	r.Add(c)
+	r.AddCmd(c)
 
 	const line = "//"
 
@@ -56,16 +57,16 @@ func TestTriggerErrNoCmd(t *testing.T) {
 	}
 
 	_, err := r.Trigger(testPfx, msg, line)
-	if !errors.Is(err, route.ErrNoCommand) {
+	if !errors.Is(err, route.ErrNoCmd) {
 		t.Errorf("trigger %q %q: %w", testPfx.Clean, line, err)
 	}
 }
 
-func TestTriggerErrCommandNotFound(t *testing.T) {
+func TestTriggerErrCmdNotFound(t *testing.T) {
 	r := route.New(testSettings, nil)
 
 	c, _ := testCmd()
-	r.Add(c)
+	r.AddCmd(c)
 
 	const line = "//yeet"
 
@@ -74,7 +75,7 @@ func TestTriggerErrCommandNotFound(t *testing.T) {
 	}
 
 	_, err := r.Trigger(testPfx, msg, line)
-	if !errors.Is(err, route.ErrCommandNotFound) {
+	if !errors.Is(err, route.ErrCmdNotFound) {
 		t.Errorf("trigger %q %q: %w", testPfx.Clean, line, err)
 	}
 }
@@ -84,7 +85,7 @@ func TestTriggerUsage(t *testing.T) {
 	r := route.New(testSettings, s)
 
 	c, _ := testCmd()
-	r.Add(c)
+	r.AddCmd(c)
 
 	const (
 		channel = 1234567890
@@ -126,67 +127,36 @@ func TestTriggerUsageNoDesc(t *testing.T) {
 	m, s := dismock.NewState(t)
 	r := route.New(testSettings, s)
 
+	defer func() {
+		const expect = "cmd \"cmd\" desc is missing"
+		if recv := fmt.Sprint(recover()); recv != expect {
+			t.Errorf("expect panic %q, got %q", expect, recv)
+		}
+	}()
+
 	c, _ := testCmd()
 	c.Desc = ""
-	r.Add(c)
-
-	const (
-		channel = 1234567890
-		line    = "//cmd `-help`"
-	)
-
-	msg := discord.Message{
-		ChannelID: channel,
-		Content:   line,
-	}
-
-	m.SendMessage(
-		&discord.Embed{
-			Title:       "`cmd` usage",
-			Description: "*no description*",
-			Fields: []discord.EmbedField{
-				{
-					Name:   "flag `-run`",
-					Value:  "run string\ndefault: `run`",
-					Inline: false,
-				},
-			},
-		},
-		discord.Message{
-			ChannelID: channel,
-			Content:   "",
-		},
-	)
-
-	_, err := r.Trigger(testPfx, msg, line)
-	if !errors.Is(err, flag.ErrHelp) {
-		t.Errorf("trigger %q %q: %s", testPfx.Clean, line, err)
-	}
+	r.AddCmd(c)
 
 	m.Eval()
 }
 
-func TestTriggerBadFlags(t *testing.T) {
-	r := route.New(testSettings, nil)
+func TestTriggerNoFlags(t *testing.T) {
+	m, s := dismock.NewState(t)
+	r := route.New(testSettings, s)
+
+	defer func() {
+		const expect = "cmd \"cmd\" flags is missing"
+		if recv := fmt.Sprint(recover()); recv != expect {
+			t.Errorf("expect panic %q, got %q", expect, recv)
+		}
+	}()
 
 	c, _ := testCmd()
-	c.Flags = (chan int)(nil)
-	r.Add(c)
+	c.Flags = nil
+	r.AddCmd(c)
 
-	const (
-		channel = 1234567890
-		line    = "//cmd `-help`"
-	)
-
-	msg := discord.Message{
-		ChannelID: channel,
-		Content:   line,
-	}
-
-	_, err := r.Trigger(testPfx, msg, line)
-	if err == nil {
-		t.Errorf("trigger %q %q: %s", testPfx.Clean, line, err)
-	}
+	m.Eval()
 }
 
 func TestReplySendErr(t *testing.T) {
@@ -194,7 +164,7 @@ func TestReplySendErr(t *testing.T) {
 	r := route.New(testSettings, s)
 
 	c, _ := testCmd()
-	r.Add(c)
+	r.AddCmd(c)
 
 	const (
 		channel = 1234567890
@@ -223,7 +193,7 @@ func TestTriggerRun(t *testing.T) {
 	r := route.New(testSettings, nil)
 
 	c, run := testCmd()
-	r.Add(c)
+	r.AddCmd(c)
 
 	const (
 		erun    = "foo"
@@ -241,7 +211,7 @@ func TestTriggerRun(t *testing.T) {
 		t.Errorf("trigger %q %q: %s", testPfx.Clean, line, err)
 	}
 
-	err = tr.Run()
+	err = tr.Command.Func(tr)
 	if err != nil {
 		t.Errorf("run: %s", err)
 	}
@@ -249,43 +219,6 @@ func TestTriggerRun(t *testing.T) {
 	if *run != erun {
 		t.Errorf("expect %q\ngot %q", erun, *run)
 	}
-}
-
-func TestTriggerNilFlags(t *testing.T) {
-	m, s := dismock.NewState(t)
-	r := route.New(testSettings, s)
-
-	c, _ := testCmd()
-	c.Flags = nil
-	r.Add(c)
-
-	const (
-		channel = 123456790
-		line    = "//cmd `-run=foo`"
-	)
-
-	msg := discord.Message{
-		ChannelID: channel,
-		Content:   line,
-	}
-
-	m.SendMessage(
-		&discord.Embed{
-			Title:       "`cmd` usage",
-			Description: "lots of fun stuff",
-		},
-		discord.Message{
-			ChannelID: channel,
-			Content:   "flag provided but not defined: -run\n",
-		},
-	)
-
-	_, err := r.Trigger(testPfx, msg, line)
-	if err == nil {
-		t.Errorf("trigger %q %q: %#v", testPfx.Clean, line, err)
-	}
-
-	m.Eval()
 }
 
 func TestTriggerUsageFillError(t *testing.T) {

@@ -4,32 +4,35 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 
 	"github.com/diamondburned/arikawa/v2/api"
 	"github.com/diamondburned/arikawa/v2/discord"
 	re2 "github.com/dlclark/regexp2"
-	"github.com/go-snart/lob"
 )
 
 //nolint:gochecknoglobals // pre-compiling regexp
 var splitter = re2.MustCompile(`(\x60+)(.*?)\1|(\S+)`, 0)
 
 var (
-	// ErrCommandNotFound occurs when an unknown command is called.
-	ErrCommandNotFound = errors.New("command not found")
+	// ErrCmdNotFound occurs when an unknown command is called.
+	ErrCmdNotFound = errors.New("command not found")
 
-	// ErrNoCommand occurs when there is no command after the prefix.
-	ErrNoCommand = errors.New("no command")
+	// ErrNoCmd occurs when there is no command after the prefix.
+	ErrNoCmd = errors.New("no command")
 )
+
+// Func is a handler for a Trigger.
+type Func = func(*Trigger) error
 
 // Trigger holds the context that triggered a Command.
 type Trigger struct {
 	Router  *Route
 	Message discord.Message
-	Prefix  *Prefix
-	Command Command
+	Prefix  Prefix
+	Command Cmd
 	FlagSet *flag.FlagSet
 	Args    []string
 	Flags   interface{}
@@ -37,12 +40,12 @@ type Trigger struct {
 }
 
 // Trigger gets a Trigger by finding an appropriate Command for a given prefix, message, and line.
-func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, error) {
+func (r *Route) Trigger(pfx Prefix, m discord.Message, line string) (*Trigger, error) {
 	t := &Trigger{
 		Router:  r,
 		Message: m,
 		Prefix:  pfx,
-		Command: Command{},
+		Command: Cmd{},
 		FlagSet: nil,
 		Args:    nil,
 		Flags:   nil,
@@ -51,26 +54,26 @@ func (r *Route) Trigger(pfx *Prefix, m discord.Message, line string) (*Trigger, 
 
 	line = strings.TrimSpace(strings.TrimPrefix(line, pfx.Value))
 	if len(line) == 0 {
-		return nil, ErrNoCommand
+		return nil, ErrNoCmd
 	}
 
 	name, args := split(line)
 
-	cmd, ok := r.Commands[name]
+	cmd, ok := r.GetCmd(name)
 	if !ok {
-		return nil, ErrCommandNotFound
+		return nil, ErrCmdNotFound
 	}
 
 	t.Command = cmd
 
 	flags, err := t.fillFlagSet()
 	if err != nil {
-		return nil, lob.Std.Error("fill: %w", err)
+		return nil, fmt.Errorf("fill: %w", err)
 	}
 
 	err = t.FlagSet.Parse(args)
 	if err != nil {
-		return nil, lob.Std.Error("parse: %w", err)
+		return nil, fmt.Errorf("parse: %w", err)
 	}
 
 	t.Flags = flags.Elem().Interface()
@@ -86,11 +89,9 @@ func (t *Trigger) fillFlagSet() (reflect.Value, error) {
 
 	flags := reflect.New(reflect.TypeOf(t.Command.Flags))
 
-	lob.Std.Debug("%#v %#v", t.FlagSet, flags)
-
-	err := t.Router.Filler.Fill(t.FlagSet, flags.Interface())
+	err := t.Router.filler.Fill(t.FlagSet, flags.Interface())
 	if err != nil {
-		return reflect.ValueOf(nil), lob.Std.Error("fill flags: %w", err)
+		return reflect.ValueOf(nil), fmt.Errorf("fill flags: %w", err)
 	}
 
 	return flags, nil
@@ -112,7 +113,7 @@ func (t *Trigger) Usage() {
 	if t.FlagSet == nil {
 		_, err := t.fillFlagSet()
 		if err != nil {
-			_ = lob.Std.Error("usage fill flagset: %w", err)
+			log.Printf("error: usage fill flagset: %s", err)
 
 			return
 		}
@@ -130,11 +131,6 @@ func (t *Trigger) Usage() {
 
 	// fuck it, no error check
 	_ = rep.Send()
-}
-
-// Run is a shortcut to t.Command.Func(t).
-func (t *Trigger) Run() error {
-	return t.Command.Func(t)
 }
 
 // Reply wraps a message to be sent to a given ChannelID using a given Session.
@@ -162,7 +158,7 @@ func (r *Reply) SendMsg() (*discord.Message, error) {
 func (r *Reply) Send() error {
 	_, err := r.SendMsg()
 	if err != nil {
-		return lob.Std.Error("send reply: %w", err)
+		return fmt.Errorf("send reply: %w", err)
 	}
 
 	return nil

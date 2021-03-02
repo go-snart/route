@@ -14,7 +14,7 @@ type Prefix struct {
 
 // GuildPrefix returns the Prefix for the given Guild.
 func (r *Route) GuildPrefix(g discord.GuildID) *Prefix {
-	set, ok := r.Guilds[g]
+	set, ok := r.GetSettings(g)
 	if !ok {
 		return nil
 	}
@@ -28,7 +28,7 @@ func (r *Route) GuildPrefix(g discord.GuildID) *Prefix {
 // DefaultPrefix returns the default Prefix.
 // This is the Prefix for discord.NullGuildID.
 func (r *Route) DefaultPrefix() *Prefix {
-	return r.GuildPrefix(discord.NullGuildID)
+	return r.GuildPrefix(BaseID)
 }
 
 // MemberPrefix attempts to make a Prefix from a Member.

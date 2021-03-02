@@ -11,7 +11,6 @@ import (
 	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/arikawa/v2/state"
-	ff "github.com/itzg/go-flagsfiller"
 )
 
 // ErrNoLinePrefix occurs when a line doesn't start with a valid prefix.
@@ -26,8 +25,6 @@ type Route struct {
 
 	setMu  *sync.RWMutex
 	setMap map[discord.GuildID]Settings
-
-	filler *ff.FlagSetFiller
 }
 
 // New makes an empty Route from the given Config and Session.
@@ -42,8 +39,6 @@ func New(base Settings, s *state.State) *Route {
 		setMap: map[discord.GuildID]Settings{
 			BaseID: base,
 		},
-
-		filler: ff.New(),
 	}
 
 	r.AddCmd(r.HelpCommand())

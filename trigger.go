@@ -11,10 +11,14 @@ import (
 	"github.com/diamondburned/arikawa/v2/api"
 	"github.com/diamondburned/arikawa/v2/discord"
 	re2 "github.com/dlclark/regexp2"
+	ff "github.com/itzg/go-flagsfiller"
 )
 
 //nolint:gochecknoglobals // pre-compiling regexp
 var splitter = re2.MustCompile(`(\x60+)(.*?)\1|(\S+)`, 0)
+
+//nolint:gochecknoglobals // only needs to be set up once
+var filler = ff.New()
 
 var (
 	// ErrCmdNotFound occurs when an unknown command is called.
@@ -89,7 +93,7 @@ func (t *Trigger) fillFlagSet() (reflect.Value, error) {
 
 	flags := reflect.New(reflect.TypeOf(t.Command.Flags))
 
-	err := t.Router.filler.Fill(t.FlagSet, flags.Interface())
+	err := filler.Fill(t.FlagSet, flags.Interface())
 	if err != nil {
 		return reflect.ValueOf(nil), fmt.Errorf("fill flags: %w", err)
 	}

@@ -3,7 +3,6 @@ package route_test
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"testing"
 
 	"github.com/diamondburned/arikawa/v2/discord"
@@ -18,11 +17,11 @@ var testPfx = route.Prefix{
 }
 
 func TestTrigger(t *testing.T) {
-	r := route.New(testGuild, nil)
+	r := route.New(testSetup, nil)
 
 	c, _ := testCmd()
 
-	r.AddCmd(c)
+	r.Add(c)
 
 	const line = "//cmd `-run=foo`"
 
@@ -43,11 +42,11 @@ func TestTrigger(t *testing.T) {
 }
 
 func TestTriggerErrNoCmd(t *testing.T) {
-	r := route.New(testGuild, nil)
+	r := route.New(testSetup, nil)
 
 	c, _ := testCmd()
 
-	r.AddCmd(c)
+	r.Add(c)
 
 	const line = "//"
 
@@ -62,10 +61,10 @@ func TestTriggerErrNoCmd(t *testing.T) {
 }
 
 func TestTriggerErrCmdNotFound(t *testing.T) {
-	r := route.New(testGuild, nil)
+	r := route.New(testSetup, nil)
 
 	c, _ := testCmd()
-	r.AddCmd(c)
+	r.Add(c)
 
 	const line = "//yeet"
 
@@ -81,10 +80,10 @@ func TestTriggerErrCmdNotFound(t *testing.T) {
 
 func TestTriggerUsage(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testGuild, s)
+	r := route.New(testSetup, s)
 
 	c, _ := testCmd()
-	r.AddCmd(c)
+	r.Add(c)
 
 	const (
 		channel = 1234567890
@@ -122,30 +121,12 @@ func TestTriggerUsage(t *testing.T) {
 	m.Eval()
 }
 
-func TestTriggerNoFlags(t *testing.T) {
-	m, s := dismock.NewState(t)
-	r := route.New(testGuild, s)
-
-	defer func() {
-		const expect = "cmd \"cmd\" missing field Flags"
-		if recv := fmt.Sprint(recover()); recv != expect {
-			t.Errorf("expect panic %q, got %q", expect, recv)
-		}
-	}()
-
-	c, _ := testCmd()
-	c.Flags = nil
-	r.AddCmd(c)
-
-	m.Eval()
-}
-
 func TestReplySendErr(t *testing.T) {
 	_, s := dismock.NewState(t)
-	r := route.New(testGuild, s)
+	r := route.New(testSetup, s)
 
 	c, _ := testCmd()
-	r.AddCmd(c)
+	r.Add(c)
 
 	const (
 		channel = 1234567890
@@ -171,10 +152,10 @@ func TestReplySendErr(t *testing.T) {
 }
 
 func TestTriggerRun(t *testing.T) {
-	r := route.New(testGuild, nil)
+	r := route.New(testSetup, nil)
 
 	c, run := testCmd()
-	r.AddCmd(c)
+	r.Add(c)
 
 	const (
 		erun    = "foo"
@@ -204,11 +185,11 @@ func TestTriggerRun(t *testing.T) {
 
 func TestTriggerFillError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testGuild, s)
+	r := route.New(testSetup, s)
 
 	c, _ := testCmd()
 	c.Flags = (func())(nil)
-	r.AddCmd(c)
+	r.Add(c)
 
 	const channel = 1234567890
 

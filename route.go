@@ -18,30 +18,24 @@ var ErrNoLinePrefix = errors.New("no prefix in line")
 
 // Route handles storing and looking up Commands.
 type Route struct {
+	Setup
 	State *state.State
 
-	cmdMu  *sync.RWMutex
-	cmdMap map[string]Cmd
-
-	setMu  *sync.RWMutex
-	setMap map[discord.GuildID]Guild
+	*sync.Mutex
+	Cmds map[string]Cmd
 }
 
 // New makes an empty Route from the given Config and Session.
-func New(base Guild, s *state.State) *Route {
+func New(set Setup, s *state.State) *Route {
 	r := &Route{
+		Setup: set,
 		State: s,
 
-		cmdMu:  &sync.RWMutex{},
-		cmdMap: map[string]Cmd{},
-
-		setMu: &sync.RWMutex{},
-		setMap: map[discord.GuildID]Guild{
-			BaseGuild: base,
-		},
+		Mutex: &sync.Mutex{},
+		Cmds:  map[string]Cmd{},
 	}
 
-	r.AddCmd(HelpCmd)
+	r.Add(HelpCmd)
 
 	return r
 }

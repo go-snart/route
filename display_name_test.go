@@ -14,7 +14,7 @@ import (
 
 func TestDisplayNameNullMeError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testGuild, s)
+	r := route.New(testSetup, s)
 
 	tr := &route.Trigger{
 		Route: r,
@@ -34,7 +34,7 @@ func TestDisplayNameNullMeError(t *testing.T) {
 
 func TestDisplayNameNull(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testGuild, s)
+	r := route.New(testSetup, s)
 
 	tr := &route.Trigger{
 		Route: r,
@@ -54,7 +54,7 @@ func TestDisplayNameNull(t *testing.T) {
 
 func TestDisplayNameMMeError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testGuild, s)
+	r := route.New(testSetup, s)
 
 	const guild = 1234567890
 
@@ -81,7 +81,7 @@ func TestDisplayNameMMeError(t *testing.T) {
 
 func TestDisplayNameMMeNick(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testGuild, s)
+	r := route.New(testSetup, s)
 
 	tr := &route.Trigger{
 		Route: r,
@@ -102,7 +102,7 @@ func TestDisplayNameMMeNick(t *testing.T) {
 
 func TestDisplayNameMMeUser(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testGuild, s)
+	r := route.New(testSetup, s)
 
 	tr := &route.Trigger{
 		Route: r,

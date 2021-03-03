@@ -3,7 +3,6 @@ package route
 import (
 	"flag"
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 
@@ -39,7 +38,10 @@ func HelpFunc(t *Trigger) error {
 
 	if len(t.Args) > 0 {
 		for _, name := range t.Args {
-			t.runHelp(name)
+			err := t.runHelp(name)
+			if err != nil {
+				return fmt.Errorf("run help %q: %w", name, err)
+			}
 		}
 
 		return nil
@@ -58,7 +60,7 @@ func HelpFunc(t *Trigger) error {
 		helps := make([]string, 0, len(cmds))
 
 		for _, cmdName := range cmds {
-			cmd, _ := t.Route.GetCmd(cmdName)
+			cmd := t.Route.Cmds[cmdName]
 			helps = append(helps, fmt.Sprintf(
 				"`%s%s`: *%s*",
 				t.Prefix.Clean, cmd.Name,
@@ -80,12 +82,9 @@ func HelpFunc(t *Trigger) error {
 }
 
 func (r *Route) cats() (cats map[string][]string, catNames []string) {
-	r.cmdMu.RLock()
-	defer r.cmdMu.RUnlock()
-
 	cats = make(map[string][]string)
 
-	for name, c := range r.cmdMap {
+	for name, c := range r.Cmds {
 		if c.Hide {
 			continue
 		}
@@ -105,14 +104,13 @@ func (r *Route) cats() (cats map[string][]string, catNames []string) {
 	return
 }
 
-func (t *Trigger) runHelp(name string) {
-	cmd, ok := t.Route.GetCmd(name)
+func (t *Trigger) runHelp(name string) error {
+	cmd, ok := t.Route.Cmds[name]
 	if !ok {
 		rep := t.Reply()
 		rep.Content = fmt.Sprintf("command `%s` not known", name)
-		_ = rep.Send()
 
-		return
+		return rep.Send()
 	}
 
 	ht := &Trigger{
@@ -128,10 +126,10 @@ func (t *Trigger) runHelp(name string) {
 		Output:  &strings.Builder{},
 	}
 	if _, err := ht.fillFlagSet(); err != nil {
-		log.Printf("help trigger: fill flagset: %s", err)
-
-		return
+		return fmt.Errorf("fill flagset: %w", err)
 	}
 
 	ht.Usage()
+
+	return nil
 }

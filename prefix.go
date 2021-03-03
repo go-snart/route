@@ -12,70 +12,48 @@ type Prefix struct {
 	Clean string
 }
 
-// GuildPrefix returns the Prefix for the given Guild.
-func (r *Route) GuildPrefix(g discord.GuildID) (Prefix, bool) {
-	set, ok := r.GetGuild(g)
-	if !ok {
-		return Prefix{}, ok
-	}
-
-	return Prefix{
-		Value: set.Prefix,
-		Clean: set.Prefix,
-	}, true
-}
-
-// DefaultPrefix returns the default Prefix.
-// This is the Prefix for discord.NullGuildID.
-func (r *Route) DefaultPrefix() (Prefix, bool) {
-	return r.GuildPrefix(BaseGuild)
-}
-
-func memberPrefix(mme *discord.Member) Prefix {
-	if mme.Nick != "" {
-		return Prefix{
-			Value: mme.Mention(),
-			Clean: "@" + mme.Nick,
-		}
-	}
-
-	return Prefix{
-		Value: mme.Mention(),
-		Clean: "@" + mme.User.Username,
-	}
-}
-
-func userPrefix(me discord.User) Prefix {
-	return Prefix{
-		Value: me.Mention(),
-		Clean: "@" + me.Username,
-	}
-}
-
 func (r *Route) findPrefix(
 	g discord.GuildID,
 	mme *discord.Member,
 	me discord.User,
 	fn func(Prefix) bool,
 ) (Prefix, bool) {
-	pfx, ok := r.GuildPrefix(g)
+	// guild prefix
+	pfxv, ok := r.Prefixes[g]
+	if !ok {
+		// fallback to null guild
+		pfxv, ok = r.Prefixes[discord.NullGuildID]
+	}
+
+	pfx := Prefix{
+		Value: pfxv,
+		Clean: pfxv,
+	}
 	if ok && fn(pfx) {
 		return pfx, true
 	}
 
-	pfx, ok = r.DefaultPrefix()
-	if ok && fn(pfx) {
-		return pfx, true
-	}
-
+	// member prefix
 	if mme != nil {
-		pfx = memberPrefix(mme)
+		pfx = Prefix{
+			Value: mme.Mention(),
+			Clean: me.Username,
+		}
+
+		if mme.Nick != "" {
+			pfx.Clean = "@" + mme.Nick
+		}
+
 		if fn(pfx) {
 			return pfx, true
 		}
 	}
 
-	pfx = userPrefix(me)
+	// user prefix
+	pfx = Prefix{
+		Value: me.Mention(),
+		Clean: "@" + me.Username,
+	}
 	if fn(pfx) {
 		return pfx, true
 	}

@@ -17,11 +17,11 @@ var testPfx = route.Prefix{
 }
 
 func TestTrigger(t *testing.T) {
-	r := route.New(testSetup, nil)
+	r := route.New(nil)
 
 	c, _ := testCmd()
 
-	r.Add(c)
+	r.AddCmds(c)
 
 	const line = "//cmd `-run=foo`"
 
@@ -35,18 +35,17 @@ func TestTrigger(t *testing.T) {
 	}
 
 	const expect = "foo"
-
-	if flags := tr.Flags.(testFlags); flags.Run != expect {
+	if flags, _ := tr.Flags.(testFlags); flags.Run != expect {
 		t.Errorf("expect run %q, got %q", expect, flags.Run)
 	}
 }
 
 func TestTriggerErrNoCmd(t *testing.T) {
-	r := route.New(testSetup, nil)
+	r := route.New(nil)
 
 	c, _ := testCmd()
 
-	r.Add(c)
+	r.AddCmds(c)
 
 	const line = "//"
 
@@ -61,10 +60,10 @@ func TestTriggerErrNoCmd(t *testing.T) {
 }
 
 func TestTriggerErrCmdNotFound(t *testing.T) {
-	r := route.New(testSetup, nil)
+	r := route.New(nil)
 
 	c, _ := testCmd()
-	r.Add(c)
+	r.AddCmds(c)
 
 	const line = "//yeet"
 
@@ -80,10 +79,10 @@ func TestTriggerErrCmdNotFound(t *testing.T) {
 
 func TestTriggerUsage(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSetup, s)
+	r := route.New(s)
 
 	c, _ := testCmd()
-	r.Add(c)
+	r.AddCmds(c)
 
 	const (
 		channel = 1234567890
@@ -123,10 +122,10 @@ func TestTriggerUsage(t *testing.T) {
 
 func TestReplySendErr(t *testing.T) {
 	_, s := dismock.NewState(t)
-	r := route.New(testSetup, s)
+	r := route.New(s)
 
 	c, _ := testCmd()
-	r.Add(c)
+	r.AddCmds(c)
 
 	const (
 		channel = 1234567890
@@ -152,10 +151,10 @@ func TestReplySendErr(t *testing.T) {
 }
 
 func TestTriggerRun(t *testing.T) {
-	r := route.New(testSetup, nil)
+	r := route.New(nil)
 
 	c, run := testCmd()
-	r.Add(c)
+	r.AddCmds(c)
 
 	const (
 		erun    = "foo"
@@ -185,11 +184,11 @@ func TestTriggerRun(t *testing.T) {
 
 func TestTriggerFillError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSetup, s)
+	r := route.New(s)
 
 	c, _ := testCmd()
 	c.Flags = (func())(nil)
-	r.Add(c)
+	r.AddCmds(c)
 
 	const channel = 1234567890
 

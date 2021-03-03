@@ -40,12 +40,6 @@ type testFlags struct {
 	Run string `default:"run" usage:"run string"`
 }
 
-var testSetup = route.Setup{
-	Prefixes: map[discord.GuildID]string{
-		discord.NullGuildID: testPfx.Value,
-	},
-}
-
 func testFunc(run *string) route.Func {
 	return func(t *route.Trigger) error {
 		*run = t.Flags.(testFlags).Run
@@ -57,7 +51,7 @@ func testFunc(run *string) route.Func {
 func TestNew(t *testing.T) {
 	m, s := dismock.NewState(t)
 
-	if r := route.New(testSetup, s); r.State != s {
+	if r := route.New(s); r.State != s {
 		t.Errorf("expect %v\ngot %v", s, r.State)
 	}
 
@@ -65,12 +59,12 @@ func TestNew(t *testing.T) {
 }
 
 func TestAdd(t *testing.T) {
-	r := route.New(testSetup, nil)
+	r := route.New(nil)
 
 	c, _ := testCmd()
-	r.Add(c)
+	r.AddCmds(c)
 
-	c2 := r.Cmds[c.Name]
+	c2, _ := r.GetCmd(c.Name)
 
 	if c2.Cat != c.Cat {
 		t.Errorf("expect cat %#v, got %#v", c.Cat, c2.Cat)
@@ -95,7 +89,7 @@ func TestAdd(t *testing.T) {
 
 func TestHandleIgnoreBot(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSetup, s)
+	r := route.New(s)
 
 	r.Handle(&gateway.MessageCreateEvent{
 		Message: discord.Message{
@@ -110,7 +104,7 @@ func TestHandleIgnoreBot(t *testing.T) {
 
 func TestHandleIgnoreSelf(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSetup, s)
+	r := route.New(s)
 
 	m.Me(testMe)
 
@@ -127,7 +121,7 @@ func TestHandleIgnoreSelf(t *testing.T) {
 
 func TestHandleNoPrefix(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSetup, s)
+	r := route.New(s)
 
 	const guild = 123
 
@@ -149,7 +143,7 @@ func TestHandleNoPrefix(t *testing.T) {
 
 func TestHandleCommandNotFound(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSetup, s)
+	r := route.New(s)
 
 	const guild = 123
 
@@ -171,14 +165,14 @@ func TestHandleCommandNotFound(t *testing.T) {
 
 func TestHandleRunError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSetup, s)
+	r := route.New(s)
 
 	c, _ := testCmd()
 	c.Func = func(*route.Trigger) error {
 		return io.EOF
 	}
 
-	r.Add(c)
+	r.AddCmds(c)
 
 	const guild = 123
 
@@ -200,11 +194,11 @@ func TestHandleRunError(t *testing.T) {
 
 func TestHandle(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSetup, s)
+	r := route.New(s)
 
 	c, run := testCmd()
 
-	r.Add(c)
+	r.AddCmds(c)
 
 	const guild = 123
 
@@ -232,11 +226,11 @@ func TestHandle(t *testing.T) {
 
 func TestHandleMeError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSetup, s)
+	r := route.New(s)
 
 	c, run := testCmd()
 
-	r.Add(c)
+	r.AddCmds(c)
 
 	const guild = 123
 

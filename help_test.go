@@ -12,9 +12,9 @@ import (
 
 func TestHelp(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSetup, s)
+	r := route.New(s)
 
-	c := r.Cmds["help"]
+	c, _ := r.GetCmd("help")
 
 	const (
 		guild   = 1234567890
@@ -58,14 +58,13 @@ func TestHelp(t *testing.T) {
 
 func TestHelpHide(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSetup, s)
+	r := route.New(s)
 
-	c := r.Cmds["help"]
+	c, _ := r.GetCmd("help")
 	c.Hide = true
 
-	r.Lock()
-	r.Cmds["help"] = c
-	r.Unlock()
+	r.DelCmd(c.Name)
+	r.AddCmds(c)
 
 	const (
 		guild   = 1234567890
@@ -106,9 +105,9 @@ func TestHelpHide(t *testing.T) {
 
 func TestHelpHelpception(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSetup, s)
+	r := route.New(s)
 
-	c := r.Cmds["help"]
+	c, _ := r.GetCmd("help")
 
 	const channel = 1234567890
 
@@ -137,7 +136,7 @@ func TestHelpHelpception(t *testing.T) {
 
 func TestHelpUsage(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSetup, s)
+	r := route.New(s)
 
 	const channel = 1234567890
 
@@ -183,9 +182,9 @@ func TestHelpUsage(t *testing.T) {
 
 func TestHelpUsageUnknown(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(testSetup, s)
+	r := route.New(s)
 
-	c := r.Cmds["help"]
+	c, _ := r.GetCmd("help")
 
 	const channel = 1234567890
 

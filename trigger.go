@@ -62,7 +62,7 @@ func (r *Route) Trigger(pfx Prefix, m discord.Message, line string) (*Trigger, e
 
 	name, args := split(line)
 
-	cmd, ok := r.Cmds[name]
+	cmd, ok := r.GetCmd(name)
 	if !ok {
 		return nil, ErrCmdNotFound
 	}

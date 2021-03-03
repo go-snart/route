@@ -3,6 +3,8 @@ linters:
   disable:
     - gci
     - exhaustivestruct
+    - maligned # deprecated
+    - interfacer # deprecated
 
 issues:
   exclude-rules:

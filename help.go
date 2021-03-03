@@ -3,7 +3,6 @@ package route
 import (
 	"flag"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/diamondburned/arikawa/v2/discord"
@@ -53,14 +52,13 @@ func HelpFunc(t *Trigger) error {
 		Description: fmt.Sprintf("prefix: `%s`", t.Prefix.Clean),
 	}
 
-	cats, catNames := t.Route.cats()
+	cats, catNames := t.Route.CmdsByCat(false)
 
 	for _, catName := range catNames {
 		cmds := cats[catName]
 		helps := make([]string, 0, len(cmds))
 
-		for _, cmdName := range cmds {
-			cmd := t.Route.Cmds[cmdName]
+		for _, cmd := range cmds {
 			helps = append(helps, fmt.Sprintf(
 				"`%s%s`: *%s*",
 				t.Prefix.Clean, cmd.Name,
@@ -81,31 +79,8 @@ func HelpFunc(t *Trigger) error {
 	return rep.Send()
 }
 
-func (r *Route) cats() (cats map[string][]string, catNames []string) {
-	cats = make(map[string][]string)
-
-	for name, c := range r.Cmds {
-		if c.Hide {
-			continue
-		}
-
-		cats[c.Cat] = append(cats[c.Cat], name)
-	}
-
-	catNames = make([]string, 0, len(cats))
-
-	for name := range cats {
-		sort.Strings(cats[name])
-		catNames = append(catNames, name)
-	}
-
-	sort.Strings(catNames)
-
-	return
-}
-
 func (t *Trigger) runHelp(name string) error {
-	cmd, ok := t.Route.Cmds[name]
+	cmd, ok := t.Route.GetCmd(name)
 	if !ok {
 		rep := t.Reply()
 		rep.Content = fmt.Sprintf("command `%s` not known", name)

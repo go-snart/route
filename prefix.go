@@ -2,8 +2,10 @@ package route
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/diamondburned/arikawa/v2/discord"
+	"github.com/diamondburned/arikawa/v2/utils/json"
 )
 
 // Prefix is a command prefix.
@@ -12,23 +14,66 @@ type Prefix struct {
 	Clean string
 }
 
-func (r *Route) findPrefix(
+// PrefixStore is a concurrent-safe store of Prefix.Values for Guilds.
+type PrefixStore struct {
+	mu sync.RWMutex
+	ma map[discord.GuildID]string
+}
+
+// GetPfx fetches a prefix for the given Guild.
+// Returns a Prefix with Value and Clean set to the prefix value, for convenience.
+func (p *PrefixStore) GetPfx(g discord.GuildID) (Prefix, bool) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	v, ok := p.ma[g]
+	if !ok {
+		return Prefix{}, false
+	}
+
+	return Prefix{
+		Value: v,
+		Clean: v,
+	}, true
+}
+
+// SetPfx stores a Prefix for the given Guild.
+func (p *PrefixStore) SetPfx(g discord.GuildID, v string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.ma[g] = v
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *PrefixStore) UnmarshalJSON(bs []byte) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	return json.Unmarshal(bs, &p.ma)
+}
+
+// MarshalJSON implements json.Unmarshaler.
+func (p *PrefixStore) MarshalJSON() ([]byte, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	return json.Marshal(p.ma)
+}
+
+func (p *PrefixStore) findPrefix(
 	g discord.GuildID,
 	mme *discord.Member,
 	me discord.User,
 	fn func(Prefix) bool,
 ) (Prefix, bool) {
 	// guild prefix
-	pfxv, ok := r.Prefixes[g]
+	pfx, ok := p.GetPfx(g)
 	if !ok {
 		// fallback to null guild
-		pfxv, ok = r.Prefixes[discord.NullGuildID]
+		pfx, ok = p.GetPfx(discord.NullGuildID)
 	}
 
-	pfx := Prefix{
-		Value: pfxv,
-		Clean: pfxv,
-	}
 	if ok && fn(pfx) {
 		return pfx, true
 	}
@@ -62,7 +107,7 @@ func (r *Route) findPrefix(
 }
 
 // LinePrefix finds the first suitable prefix that matches the given line.
-func (r *Route) LinePrefix(
+func (p *PrefixStore) LinePrefix(
 	g discord.GuildID,
 	me discord.User,
 	mme *discord.Member,
@@ -70,7 +115,7 @@ func (r *Route) LinePrefix(
 ) (Prefix, bool) {
 	line = strings.TrimSpace(line)
 
-	return r.findPrefix(g, mme, me, func(pfx Prefix) bool {
+	return p.findPrefix(g, mme, me, func(pfx Prefix) bool {
 		return strings.HasPrefix(line, pfx.Value)
 	})
 }

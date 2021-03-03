@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"sync"
 
 	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/arikawa/v2/gateway"
@@ -16,26 +15,28 @@ import (
 // ErrNoLinePrefix occurs when a line doesn't start with a valid prefix.
 var ErrNoLinePrefix = errors.New("no prefix in line")
 
-// Route handles storing and looking up Commands.
+// Route handles storing and looking up Cmds.
 type Route struct {
-	Setup
-	State *state.State
+	*state.State
 
-	*sync.Mutex
-	Cmds map[string]Cmd
+	*PrefixStore
+	*CmdStore
 }
 
-// New makes an empty Route from the given Config and Session.
-func New(set Setup, s *state.State) *Route {
+// New makes an empty Route with the given State.
+func New(s *state.State) *Route {
 	r := &Route{
-		Setup: set,
 		State: s,
 
-		Mutex: &sync.Mutex{},
-		Cmds:  map[string]Cmd{},
+		PrefixStore: &PrefixStore{
+			ma: make(map[discord.GuildID]string),
+		},
+		CmdStore: &CmdStore{
+			ma: make(map[string]Cmd),
+		},
 	}
 
-	r.Add(HelpCmd)
+	r.AddCmds(HelpCmd)
 
 	return r
 }

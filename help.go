@@ -46,9 +46,14 @@ func HelpFunc(t *Trigger) error {
 		return nil
 	}
 
+	me, err := t.Route.Me()
+	if err != nil {
+		return fmt.Errorf("get me: %w", err)
+	}
+
 	rep := t.Reply()
 	rep.Embed = &discord.Embed{
-		Title:       fmt.Sprintf("%s Help", t.DisplayName()),
+		Title:       fmt.Sprintf("%s Help", me.Username),
 		Description: fmt.Sprintf("prefix: `%s`", t.Prefix.Clean),
 	}
 

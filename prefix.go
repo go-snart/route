@@ -27,14 +27,11 @@ func (p *PrefixStore) GetPfx(g discord.GuildID) (Prefix, bool) {
 	defer p.mu.RUnlock()
 
 	v, ok := p.ma[g]
-	if !ok {
-		return Prefix{}, false
-	}
 
 	return Prefix{
 		Value: v,
 		Clean: v,
-	}, true
+	}, ok
 }
 
 // SetPfx stores a Prefix for the given Guild.
@@ -70,7 +67,7 @@ func (p *PrefixStore) findPrefix(
 	// guild prefix
 	pfx, ok := p.GetPfx(g)
 	if !ok {
-		// fallback to null guild
+		// fallback to default prefix
 		pfx, ok = p.GetPfx(discord.NullGuildID)
 	}
 

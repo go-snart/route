@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 
 	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/arikawa/v2/gateway"
@@ -18,22 +19,20 @@ var ErrNoLinePrefix = errors.New("no prefix in line")
 // Route handles storing and looking up Cmds.
 type Route struct {
 	*state.State
+	Store
 
-	*PrefixStore
-	*CmdStore
+	cmdMu sync.RWMutex
+	cmdMa map[string]Cmd
 }
 
 // New makes an empty Route with the given State.
-func New(s *state.State) *Route {
+func New(s *state.State, z Store) *Route {
 	r := &Route{
 		State: s,
+		Store: z,
 
-		PrefixStore: &PrefixStore{
-			ma: make(map[discord.GuildID]string),
-		},
-		CmdStore: &CmdStore{
-			ma: make(map[string]Cmd),
-		},
+		cmdMu: sync.RWMutex{},
+		cmdMa: map[string]Cmd{},
 	}
 
 	r.AddCmds(HelpCmd)

@@ -50,16 +50,23 @@ func testFunc(run *string) route.Func {
 
 func TestNew(t *testing.T) {
 	m, s := dismock.NewState(t)
+	z := route.Store(nil)
 
-	if r := route.New(s); r.State != s {
+	r := route.New(s, z)
+
+	if r.State != s {
 		t.Errorf("expect %v\ngot %v", s, r.State)
+	}
+
+	if r.Store != z {
+		t.Errorf("expect %v\ngot %v", z, r.Store)
 	}
 
 	m.Eval()
 }
 
 func TestAdd(t *testing.T) {
-	r := route.New(nil)
+	r := route.New(nil, nil)
 
 	c, _ := testCmd()
 	r.AddCmds(c)
@@ -89,7 +96,7 @@ func TestAdd(t *testing.T) {
 
 func TestHandleIgnoreBot(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(s)
+	r := route.New(s, nil)
 
 	r.Handle(&gateway.MessageCreateEvent{
 		Message: discord.Message{
@@ -104,7 +111,7 @@ func TestHandleIgnoreBot(t *testing.T) {
 
 func TestHandleIgnoreSelf(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(s)
+	r := route.New(s, nil)
 
 	m.Me(testMe)
 
@@ -121,7 +128,7 @@ func TestHandleIgnoreSelf(t *testing.T) {
 
 func TestHandleNoPrefix(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(s)
+	r := route.New(s, nil)
 
 	const guild = 123
 
@@ -143,7 +150,7 @@ func TestHandleNoPrefix(t *testing.T) {
 
 func TestHandleCommandNotFound(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(s)
+	r := route.New(s, nil)
 
 	const guild = 123
 
@@ -165,7 +172,7 @@ func TestHandleCommandNotFound(t *testing.T) {
 
 func TestHandleRunError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(s)
+	r := route.New(s, nil)
 
 	c, _ := testCmd()
 	c.Func = func(*route.Trigger) error {
@@ -194,7 +201,7 @@ func TestHandleRunError(t *testing.T) {
 
 func TestHandle(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(s)
+	r := route.New(s, nil)
 
 	c, run := testCmd()
 
@@ -226,7 +233,7 @@ func TestHandle(t *testing.T) {
 
 func TestHandleMeError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(s)
+	r := route.New(s, nil)
 
 	c, run := testCmd()
 

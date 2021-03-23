@@ -11,14 +11,14 @@ import (
 )
 
 func TestLinePrefixGuild(t *testing.T) {
-	r := route.New(nil)
+	r := route.New(nil, nil)
 
 	const (
 		guild = 1234567890
 		pfxv  = "//"
 	)
 
-	r.SetPfx(guild, pfxv)
+	r.SetPrefix(guild, pfxv)
 
 	pfx, _ := r.LinePrefix(guild, testMe, nil, pfxv)
 
@@ -35,11 +35,11 @@ func TestLinePrefixGuild(t *testing.T) {
 func TestLinePrefixNull(t *testing.T) {
 	const pfxv = "test!"
 
-	r := route.New(nil)
+	r := route.New(nil, nil)
 
 	const guild = 1234567890
 
-	r.SetPfx(guild, "test!")
+	r.SetPrefix(guild, "test!")
 
 	pfx, ok := r.LinePrefix(guild, testMe, nil, "test!uwu")
 	if !ok {
@@ -58,7 +58,7 @@ func TestLinePrefixNull(t *testing.T) {
 
 func TestLinePrefixUser(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(s)
+	r := route.New(s, nil)
 
 	pfx, _ := r.LinePrefix(discord.NullGuildID, testMe, nil, testMe.Mention())
 	expect := route.Prefix{
@@ -75,7 +75,7 @@ func TestLinePrefixUser(t *testing.T) {
 
 func TestLinePrefixMemberNick(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(s)
+	r := route.New(s, nil)
 
 	const guild = 666
 
@@ -94,7 +94,7 @@ func TestLinePrefixMemberNick(t *testing.T) {
 
 func TestLinePrefixNil(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(s)
+	r := route.New(s, nil)
 
 	const guild = 666
 

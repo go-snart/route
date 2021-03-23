@@ -17,7 +17,7 @@ var testPfx = route.Prefix{
 }
 
 func TestTrigger(t *testing.T) {
-	r := route.New(nil)
+	r := route.New(nil, nil)
 
 	c, _ := testCmd()
 
@@ -41,7 +41,7 @@ func TestTrigger(t *testing.T) {
 }
 
 func TestTriggerErrNoCmd(t *testing.T) {
-	r := route.New(nil)
+	r := route.New(nil, nil)
 
 	c, _ := testCmd()
 
@@ -60,7 +60,7 @@ func TestTriggerErrNoCmd(t *testing.T) {
 }
 
 func TestTriggerErrCmdNotFound(t *testing.T) {
-	r := route.New(nil)
+	r := route.New(nil, nil)
 
 	c, _ := testCmd()
 	r.AddCmds(c)
@@ -79,7 +79,7 @@ func TestTriggerErrCmdNotFound(t *testing.T) {
 
 func TestTriggerUsage(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(s)
+	r := route.New(s, nil)
 
 	c, _ := testCmd()
 	r.AddCmds(c)
@@ -122,7 +122,7 @@ func TestTriggerUsage(t *testing.T) {
 
 func TestReplySendErr(t *testing.T) {
 	_, s := dismock.NewState(t)
-	r := route.New(s)
+	r := route.New(s, nil)
 
 	c, _ := testCmd()
 	r.AddCmds(c)
@@ -151,7 +151,7 @@ func TestReplySendErr(t *testing.T) {
 }
 
 func TestTriggerRun(t *testing.T) {
-	r := route.New(nil)
+	r := route.New(nil, nil)
 
 	c, run := testCmd()
 	r.AddCmds(c)
@@ -184,7 +184,7 @@ func TestTriggerRun(t *testing.T) {
 
 func TestTriggerFillError(t *testing.T) {
 	m, s := dismock.NewState(t)
-	r := route.New(s)
+	r := route.New(s, nil)
 
 	c, _ := testCmd()
 	c.Flags = (func())(nil)

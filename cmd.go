@@ -3,7 +3,6 @@ package route
 import (
 	"log"
 	"sort"
-	"sync"
 )
 
 // Cmd is a command.
@@ -16,35 +15,29 @@ type Cmd struct {
 	Flags interface{}
 }
 
-// CmdStore is a concurrent-safe store of Cmds.
-type CmdStore struct {
-	mu sync.RWMutex
-	ma map[string]Cmd
-}
-
-// AddCmds adds Cmds to the CmdStore.
+// AddCmds adds Cmds to the Route.
 // Duplicate names are skipped.
-func (c *CmdStore) AddCmds(cs ...Cmd) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (r *Route) AddCmds(cs ...Cmd) {
+	r.cmdMu.Lock()
+	defer r.cmdMu.Unlock()
 
 	for _, cmd := range cs {
-		if _, ok := c.ma[cmd.Name]; ok {
+		if _, ok := r.cmdMa[cmd.Name]; ok {
 			log.Printf("cmd %q already exists (skipping)", cmd.Name)
 
 			continue
 		}
 
-		c.ma[cmd.Name] = cmd
+		r.cmdMa[cmd.Name] = cmd
 	}
 }
 
-// GetCmd fetches a Cmd from the CmdStore.
-func (c *CmdStore) GetCmd(name string) (Cmd, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+// GetCmd fetches a Cmd from the Route.
+func (r *Route) GetCmd(name string) (Cmd, bool) {
+	r.cmdMu.RLock()
+	defer r.cmdMu.RUnlock()
 
-	cmd, ok := c.ma[name]
+	cmd, ok := r.cmdMa[name]
 	if !ok {
 		return Cmd{}, false
 	}
@@ -52,29 +45,31 @@ func (c *CmdStore) GetCmd(name string) (Cmd, bool) {
 	return cmd, true
 }
 
-// DelCmd removes a Cmd from the CmdStore.
-func (c *CmdStore) DelCmd(name string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+// DelCmd removes a Cmd from the Route.
+func (r *Route) DelCmd(name string) {
+	r.cmdMu.Lock()
+	defer r.cmdMu.Unlock()
 
-	delete(c.ma, name)
+	delete(r.cmdMa, name)
 }
 
 // CmdsByCat creates a map of Cmd categories and a list of category names.
+//
 // Each category, and category names, are sorted.
+//
 // If hidden is true, Cmds with Hide will be included.
-func (c *CmdStore) CmdsByCat(hidden bool) (map[string][]Cmd, []string) {
+func (r *Route) CmdsByCat(hidden bool) (map[string][]Cmd, []string) {
 	cats := make(map[string][]Cmd)
 
-	c.mu.RLock()
+	r.cmdMu.RLock()
 
-	for _, cmd := range c.ma {
+	for _, cmd := range r.cmdMa {
 		if !cmd.Hide || hidden {
 			cats[cmd.Cat] = append(cats[cmd.Cat], cmd)
 		}
 	}
 
-	c.mu.RUnlock()
+	r.cmdMu.RUnlock()
 
 	catNames := make([]string, 0, len(cats))
 

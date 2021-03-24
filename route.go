@@ -27,17 +27,13 @@ type Route struct {
 
 // New makes an empty Route with the given State.
 func New(s *state.State, z Store) *Route {
-	r := &Route{
+	return &Route{
 		State: s,
 		Store: z,
 
 		cmdMu: sync.RWMutex{},
 		cmdMa: map[string]Cmd{},
 	}
-
-	r.AddCmds(HelpCmd)
-
-	return r
 }
 
 // Handle is a MessageCreate handler function for the Route.

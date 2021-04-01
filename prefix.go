@@ -102,18 +102,6 @@ func (r *Route) LinePrefix(
 ) (Prefix, bool) {
 	line = strings.TrimSpace(line)
 
-	used := func(pfx Prefix) bool {
-		if strings.HasPrefix(line, pfx.Value) {
-			return true
-		}
-
-		if strings.HasPrefix(line, pfx.Clean) {
-			return true
-		}
-
-		return false
-	}
-
 	// guild prefix
 	pfxv, ok := r.Prefix.Get(g)
 	if !ok {
@@ -121,14 +109,13 @@ func (r *Route) LinePrefix(
 		pfxv, ok = r.Prefix.Get(GuildIDGlobal)
 	}
 
-	pfx := Prefix{pfxv, pfxv}
-	if ok && used(pfx) {
-		return pfx, true
+	if ok && strings.HasPrefix(line, pfxv) {
+		return Prefix{pfxv, pfxv}, true
 	}
 
 	// member prefix
-	if mme != nil {
-		pfx = Prefix{
+	if mme != nil && strings.HasPrefix(line, mme.Mention()) {
+		pfx := Prefix{
 			Value: mme.Mention(),
 			Clean: "@" + me.Username + " ",
 		}
@@ -137,18 +124,15 @@ func (r *Route) LinePrefix(
 			pfx.Clean = "@" + mme.Nick + " "
 		}
 
-		if used(pfx) {
-			return pfx, true
-		}
+		return pfx, true
 	}
 
 	// user prefix
-	pfx = Prefix{
-		Value: me.Mention(),
-		Clean: "@" + me.Username + " ",
-	}
-	if used(pfx) {
-		return pfx, true
+	if strings.HasPrefix(line, me.Mention()) {
+		return Prefix{
+			Value: me.Mention(),
+			Clean: "@" + me.Username + " ",
+		}, true
 	}
 
 	return Prefix{"", ""}, false

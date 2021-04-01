@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"sync"
 
 	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/arikawa/v2/gateway"
 	"github.com/diamondburned/arikawa/v2/state"
+	"github.com/superloach/confy"
 )
 
 // ErrNoLinePrefix occurs when a line doesn't start with a valid prefix.
@@ -18,22 +18,32 @@ var ErrNoLinePrefix = errors.New("no prefix in line")
 
 // Route handles storing and looking up Cmds.
 type Route struct {
-	*state.State
-	Store
+	State *state.State
+	Confy *confy.Confy
 
-	cmdMu sync.RWMutex
-	cmdMa map[string]Cmd
+	Prefix *PrefixStore
+	Cmd    *CmdStore
 }
 
+const (
+	// KeyPrefix is the Confy key used to load/store prefixes.
+	KeyPrefix = "prefix"
+)
+
 // New makes an empty Route with the given State.
-func New(s *state.State, z Store) *Route {
+func New(s *state.State, c *confy.Confy) (*Route, error) {
+	pfxs, err := OpenPrefixStore(c, "prefix")
+	if err != nil {
+		return nil, fmt.Errorf("confy load %q: %w", KeyPrefix, err)
+	}
+
 	return &Route{
 		State: s,
-		Store: z,
+		Confy: c,
 
-		cmdMu: sync.RWMutex{},
-		cmdMa: map[string]Cmd{},
-	}
+		Prefix: pfxs,
+		Cmd:    NewCmdStore(),
+	}, nil
 }
 
 // Handle is a MessageCreate handler function for the Route.

@@ -7,8 +7,10 @@ import (
 
 	"github.com/diamondburned/arikawa/v2/discord"
 	"github.com/diamondburned/arikawa/v2/gateway"
+	"github.com/diamondburned/arikawa/v2/state"
 	"github.com/diamondburned/arikawa/v2/utils/httputil"
 	"github.com/mavolin/dismock/v2/pkg/dismock"
+	"github.com/superloach/confy"
 
 	"github.com/go-snart/route"
 )
@@ -48,55 +50,87 @@ func testFunc(run *string) route.Func {
 	}
 }
 
-func TestNew(t *testing.T) {
-	m, s := dismock.NewState(t)
-	z := route.Store(nil)
+func testConfy() *confy.Confy {
+	c := confy.New(
+		confy.NewDataMem(),
+		confy.FormJSON{},
+	)
 
-	r := route.New(s, z)
+	err := c.Store(route.KeyPrefix, map[discord.GuildID]string{
+		discord.NullGuildID: testPfx.Value,
+	})
+	if err != nil {
+		// shouldn't error
+		panic(err)
+	}
+
+	return c
+}
+
+func testRoute(t *testing.T, s *state.State, c *confy.Confy) *route.Route {
+	t.Helper()
+
+	r, err := route.New(s, c)
+	if err != nil {
+		t.Errorf("new route: %s", err)
+	}
+
+	return r
+}
+
+func TestNew(t *testing.T) {
+	t.Parallel()
+
+	m, s := dismock.NewState(t)
+	c := testConfy()
+	r := testRoute(t, s, c)
 
 	if r.State != s {
 		t.Errorf("expect %v\ngot %v", s, r.State)
 	}
 
-	if r.Store != z {
-		t.Errorf("expect %v\ngot %v", z, r.Store)
+	if r.Confy != c {
+		t.Errorf("expect %v\ngot %v", c, r.Confy)
 	}
 
 	m.Eval()
 }
 
 func TestAdd(t *testing.T) {
-	r := route.New(nil, nil)
+	t.Parallel()
+	r := testRoute(t, nil, testConfy())
 
-	c, _ := testCmd()
-	r.AddCmds(c)
+	cmd, _ := testCmd()
+	r.Cmd.Add(cmd)
 
-	c2, _ := r.GetCmd(c.Name)
+	cmd2, _ := r.Cmd.Get(cmd.Name)
 
-	if c2.Cat != c.Cat {
-		t.Errorf("expect cat %#v, got %#v", c.Cat, c2.Cat)
+	if cmd2.Cat != cmd.Cat {
+		t.Errorf("expect cat %#v, got %#v", cmd.Cat, cmd2.Cat)
 	}
 
-	if c2.Desc != c.Desc {
-		t.Errorf("expect desc %#v, got %#v", c.Desc, c2.Desc)
+	if cmd2.Desc != cmd.Desc {
+		t.Errorf("expect desc %#v, got %#v", cmd.Desc, cmd2.Desc)
 	}
 
-	if c2.Flags != c.Flags {
-		t.Errorf("expect flags %#v, got %#v", c.Flags, c2.Flags)
+	if cmd2.Flags != cmd.Flags {
+		t.Errorf("expect flags %#v, got %#v", cmd.Flags, cmd2.Flags)
 	}
 
-	if c2.Hide != c.Hide {
-		t.Errorf("expect hide %#v, got %#v", c.Hide, c2.Hide)
+	if cmd2.Hide != cmd.Hide {
+		t.Errorf("expect hide %#v, got %#v", cmd.Hide, cmd2.Hide)
 	}
 
-	if c2.Name != c.Name {
-		t.Errorf("expect name %#v, got %#v", c.Name, c2.Name)
+	if cmd2.Name != cmd.Name {
+		t.Errorf("expect name %#v, got %#v", cmd.Name, cmd2.Name)
 	}
 }
 
 func TestHandleIgnoreBot(t *testing.T) {
+	t.Parallel()
 	m, s := dismock.NewState(t)
-	r := route.New(s, nil)
+	c := testConfy()
+	r := testRoute(t, s, c)
 
 	r.Handle(&gateway.MessageCreateEvent{
 		Message: discord.Message{
@@ -110,8 +144,10 @@ func TestHandleIgnoreBot(t *testing.T) {
 }
 
 func TestHandleIgnoreSelf(t *testing.T) {
+	t.Parallel()
 	m, s := dismock.NewState(t)
-	r := route.New(s, nil)
+	c := testConfy()
+	r := testRoute(t, s, c)
 
 	m.Me(testMe)
 
@@ -127,8 +163,10 @@ func TestHandleIgnoreSelf(t *testing.T) {
 }
 
 func TestHandleNoPrefix(t *testing.T) {
+	t.Parallel()
 	m, s := dismock.NewState(t)
-	r := route.New(s, nil)
+	c := testConfy()
+	r := testRoute(t, s, c)
 
 	const guild = 123
 
@@ -149,8 +187,10 @@ func TestHandleNoPrefix(t *testing.T) {
 }
 
 func TestHandleCommandNotFound(t *testing.T) {
+	t.Parallel()
 	m, s := dismock.NewState(t)
-	r := route.New(s, nil)
+	c := testConfy()
+	r := testRoute(t, s, c)
 
 	const guild = 123
 
@@ -171,15 +211,17 @@ func TestHandleCommandNotFound(t *testing.T) {
 }
 
 func TestHandleRunError(t *testing.T) {
+	t.Parallel()
 	m, s := dismock.NewState(t)
-	r := route.New(s, nil)
+	c := testConfy()
+	r := testRoute(t, s, c)
 
-	c, _ := testCmd()
-	c.Func = func(*route.Trigger) error {
+	cmd, _ := testCmd()
+	cmd.Func = func(*route.Trigger) error {
 		return io.EOF
 	}
 
-	r.AddCmds(c)
+	r.Cmd.Add(cmd)
 
 	const guild = 123
 
@@ -192,7 +234,7 @@ func TestHandleRunError(t *testing.T) {
 			Author: discord.User{
 				ID: 999,
 			},
-			Content: testMMe.Mention() + " " + c.Name,
+			Content: testMMe.Mention() + " " + cmd.Name,
 		},
 	})
 
@@ -200,12 +242,13 @@ func TestHandleRunError(t *testing.T) {
 }
 
 func TestHandle(t *testing.T) {
+	t.Parallel()
 	m, s := dismock.NewState(t)
-	r := route.New(s, nil)
+	c := testConfy()
+	r := testRoute(t, s, c)
 
-	c, run := testCmd()
-
-	r.AddCmds(c)
+	cmd, run := testCmd()
+	r.Cmd.Add(cmd)
 
 	const guild = 123
 
@@ -220,7 +263,7 @@ func TestHandle(t *testing.T) {
 			Author: discord.User{
 				ID: 999,
 			},
-			Content: testMMe.Mention() + " " + c.Name + " -run=" + testRun,
+			Content: testMMe.Mention() + " " + cmd.Name + " -run=" + testRun,
 		},
 	})
 
@@ -232,12 +275,13 @@ func TestHandle(t *testing.T) {
 }
 
 func TestHandleMeError(t *testing.T) {
+	t.Parallel()
 	m, s := dismock.NewState(t)
-	r := route.New(s, nil)
+	c := testConfy()
+	r := testRoute(t, s, c)
 
-	c, run := testCmd()
-
-	r.AddCmds(c)
+	cmd, run := testCmd()
+	r.Cmd.Add(cmd)
 
 	const guild = 123
 
@@ -255,7 +299,7 @@ func TestHandleMeError(t *testing.T) {
 			Author: discord.User{
 				ID: 999,
 			},
-			Content: testMMe.Mention() + " " + c.Name + " -run=" + testRun,
+			Content: testMMe.Mention() + " " + cmd.Name + " -run=" + testRun,
 		},
 	})
 

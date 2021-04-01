@@ -1,9 +1,46 @@
 package route
 
 import (
-	"log"
 	"sort"
+	"sync"
 )
+
+// CmdStore is a concurrent-safe store of Cmds.
+type CmdStore struct {
+	ma map[string]Cmd
+	mu sync.RWMutex
+}
+
+// NewCmdStore creates a usable CmdStore.
+func NewCmdStore() *CmdStore {
+	return &CmdStore{
+		ma: map[string]Cmd{},
+		mu: sync.RWMutex{},
+	}
+}
+
+// Add stores a Cmd, using its defined name.
+func (c *CmdStore) Add(cmd Cmd) {
+	c.mu.Lock()
+	c.ma[cmd.Name] = cmd
+	c.mu.Unlock()
+}
+
+// Get fetches a Cmd with the given name.
+func (c *CmdStore) Get(name string) (Cmd, bool) {
+	c.mu.RLock()
+	cmd, ok := c.ma[name]
+	c.mu.RUnlock()
+
+	return cmd, ok
+}
+
+// Del removes a Cmd with the given name.
+func (c *CmdStore) Del(name string) {
+	c.mu.Lock()
+	delete(c.ma, name)
+	c.mu.Unlock()
+}
 
 // Cmd is a command.
 type Cmd struct {
@@ -15,61 +52,19 @@ type Cmd struct {
 	Flags interface{}
 }
 
-// AddCmds adds Cmds to the Route.
-// Duplicate names are skipped.
-func (r *Route) AddCmds(cs ...Cmd) {
-	r.cmdMu.Lock()
-	defer r.cmdMu.Unlock()
-
-	for _, cmd := range cs {
-		if _, ok := r.cmdMa[cmd.Name]; ok {
-			log.Printf("cmd %q already exists (skipping)", cmd.Name)
-
-			continue
-		}
-
-		r.cmdMa[cmd.Name] = cmd
-	}
-}
-
-// GetCmd fetches a Cmd from the Route.
-func (r *Route) GetCmd(name string) (Cmd, bool) {
-	r.cmdMu.RLock()
-	defer r.cmdMu.RUnlock()
-
-	cmd, ok := r.cmdMa[name]
-	if !ok {
-		return Cmd{}, false
-	}
-
-	return cmd, true
-}
-
-// DelCmd removes a Cmd from the Route.
-func (r *Route) DelCmd(name string) {
-	r.cmdMu.Lock()
-	defer r.cmdMu.Unlock()
-
-	delete(r.cmdMa, name)
-}
-
-// CmdsByCat creates a map of Cmd categories and a list of category names.
+// ByCat creates a map of sorted Cmd categories, and a sorted list of category names.
 //
-// Each category, and category names, are sorted.
-//
-// If hidden is true, Cmds with Hide will be included.
-func (r *Route) CmdsByCat(hidden bool) (map[string][]Cmd, []string) {
+// If hidden is true, Cmds with the Hide flag will be included.
+func (c *CmdStore) ByCat(hidden bool) (map[string][]Cmd, []string) {
 	cats := make(map[string][]Cmd)
 
-	r.cmdMu.RLock()
-
-	for _, cmd := range r.cmdMa {
+	c.mu.RLock()
+	for _, cmd := range c.ma {
 		if !cmd.Hide || hidden {
 			cats[cmd.Cat] = append(cats[cmd.Cat], cmd)
 		}
 	}
-
-	r.cmdMu.RUnlock()
+	c.mu.RUnlock()
 
 	catNames := make([]string, 0, len(cats))
 

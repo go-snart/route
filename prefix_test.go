@@ -11,17 +11,19 @@ import (
 )
 
 func TestLinePrefixGuild(t *testing.T) {
-	r := route.New(nil, nil)
+	t.Parallel()
 
 	const (
 		guild = 1234567890
-		pfxv  = "//"
+		pfxv  = "%%"
 	)
 
-	r.SetPrefix(guild, pfxv)
+	c := testConfy()
+	r := testRoute(t, nil, c)
+
+	r.Prefix.Set(guild, pfxv)
 
 	pfx, _ := r.LinePrefix(guild, testMe, nil, pfxv)
-
 	expect := route.Prefix{
 		Value: pfxv,
 		Clean: pfxv,
@@ -33,19 +35,18 @@ func TestLinePrefixGuild(t *testing.T) {
 }
 
 func TestLinePrefixNull(t *testing.T) {
+	t.Parallel()
+
 	const pfxv = "test!"
 
-	r := route.New(nil, nil)
+	c := testConfy()
+	r := testRoute(t, nil, c)
 
 	const guild = 1234567890
 
-	r.SetPrefix(guild, "test!")
+	r.Prefix.Set(guild, "test!")
 
-	pfx, ok := r.LinePrefix(guild, testMe, nil, "test!uwu")
-	if !ok {
-		t.Error("!ok")
-	}
-
+	pfx, _ := r.LinePrefix(guild, testMe, nil, "test!uwu")
 	expect := route.Prefix{
 		Value: pfxv,
 		Clean: pfxv,
@@ -57,13 +58,16 @@ func TestLinePrefixNull(t *testing.T) {
 }
 
 func TestLinePrefixUser(t *testing.T) {
+	t.Parallel()
+
 	m, s := dismock.NewState(t)
-	r := route.New(s, nil)
+	c := testConfy()
+	r := testRoute(t, s, c)
 
 	pfx, _ := r.LinePrefix(discord.NullGuildID, testMe, nil, testMe.Mention())
 	expect := route.Prefix{
 		Value: testMe.Mention(),
-		Clean: "@User",
+		Clean: "@" + testMe.Username + " ",
 	}
 
 	if !reflect.DeepEqual(pfx, expect) {
@@ -74,15 +78,18 @@ func TestLinePrefixUser(t *testing.T) {
 }
 
 func TestLinePrefixMemberNick(t *testing.T) {
+	t.Parallel()
+
 	m, s := dismock.NewState(t)
-	r := route.New(s, nil)
+	c := testConfy()
+	r := testRoute(t, s, c)
 
 	const guild = 666
 
 	pfx, _ := r.LinePrefix(guild, testMe, &testMMeNick, testMMeNick.Mention())
 	expect := route.Prefix{
 		Value: testMMeNick.Mention(),
-		Clean: "@" + testMMeNick.Nick,
+		Clean: "@" + testMMeNick.Nick + " ",
 	}
 
 	if !reflect.DeepEqual(pfx, expect) {
@@ -93,8 +100,11 @@ func TestLinePrefixMemberNick(t *testing.T) {
 }
 
 func TestLinePrefixNil(t *testing.T) {
+	t.Parallel()
+
 	m, s := dismock.NewState(t)
-	r := route.New(s, nil)
+	c := testConfy()
+	r := testRoute(t, s, c)
 
 	const guild = 666
 

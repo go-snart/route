@@ -17,11 +17,13 @@ var testPfx = route.Prefix{
 }
 
 func TestTrigger(t *testing.T) {
-	r := route.New(nil, nil)
+	t.Parallel()
 
-	c, _ := testCmd()
+	c := testConfy()
+	r := testRoute(t, nil, c)
 
-	r.AddCmds(c)
+	cmd, _ := testCmd()
+	r.Cmd.Add(cmd)
 
 	const line = "//cmd `-run=foo`"
 
@@ -41,11 +43,14 @@ func TestTrigger(t *testing.T) {
 }
 
 func TestTriggerErrNoCmd(t *testing.T) {
-	r := route.New(nil, nil)
+	t.Parallel()
 
-	c, _ := testCmd()
+	c := testConfy()
+	r := testRoute(t, nil, c)
 
-	r.AddCmds(c)
+	cmd, _ := testCmd()
+
+	r.Cmd.Add(cmd)
 
 	const line = "//"
 
@@ -55,15 +60,18 @@ func TestTriggerErrNoCmd(t *testing.T) {
 
 	_, err := r.Trigger(testPfx, msg, line)
 	if !errors.Is(err, route.ErrNoCmd) {
-		t.Errorf("trigger %q %q: %w", testPfx.Clean, line, err)
+		t.Errorf("trigger %q %q: %s", testPfx.Clean, line, err)
 	}
 }
 
 func TestTriggerErrCmdNotFound(t *testing.T) {
-	r := route.New(nil, nil)
+	t.Parallel()
 
-	c, _ := testCmd()
-	r.AddCmds(c)
+	c := testConfy()
+	r := testRoute(t, nil, c)
+
+	cmd, _ := testCmd()
+	r.Cmd.Add(cmd)
 
 	const line = "//yeet"
 
@@ -73,16 +81,19 @@ func TestTriggerErrCmdNotFound(t *testing.T) {
 
 	_, err := r.Trigger(testPfx, msg, line)
 	if !errors.Is(err, route.ErrCmdNotFound) {
-		t.Errorf("trigger %q %q: %w", testPfx.Clean, line, err)
+		t.Errorf("trigger %q %q: %s", testPfx.Clean, line, err)
 	}
 }
 
 func TestTriggerUsage(t *testing.T) {
-	m, s := dismock.NewState(t)
-	r := route.New(s, nil)
+	t.Parallel()
 
-	c, _ := testCmd()
-	r.AddCmds(c)
+	m, s := dismock.NewState(t)
+	c := testConfy()
+	r := testRoute(t, s, c)
+
+	cmd, _ := testCmd()
+	r.Cmd.Add(cmd)
 
 	const (
 		channel = 1234567890
@@ -121,11 +132,14 @@ func TestTriggerUsage(t *testing.T) {
 }
 
 func TestReplySendErr(t *testing.T) {
-	_, s := dismock.NewState(t)
-	r := route.New(s, nil)
+	t.Parallel()
 
-	c, _ := testCmd()
-	r.AddCmds(c)
+	_, s := dismock.NewState(t)
+	c := testConfy()
+	r := testRoute(t, s, c)
+
+	cmd, _ := testCmd()
+	r.Cmd.Add(cmd)
 
 	const (
 		channel = 1234567890
@@ -151,10 +165,13 @@ func TestReplySendErr(t *testing.T) {
 }
 
 func TestTriggerRun(t *testing.T) {
-	r := route.New(nil, nil)
+	t.Parallel()
 
-	c, run := testCmd()
-	r.AddCmds(c)
+	c := testConfy()
+	r := testRoute(t, nil, c)
+
+	cmd, run := testCmd()
+	r.Cmd.Add(cmd)
 
 	const (
 		erun    = "foo"
@@ -183,16 +200,19 @@ func TestTriggerRun(t *testing.T) {
 }
 
 func TestTriggerFillError(t *testing.T) {
-	m, s := dismock.NewState(t)
-	r := route.New(s, nil)
+	t.Parallel()
 
-	c, _ := testCmd()
-	c.Flags = (func())(nil)
-	r.AddCmds(c)
+	m, s := dismock.NewState(t)
+	c := testConfy()
+	r := testRoute(t, s, c)
+
+	cmd, _ := testCmd()
+	cmd.Flags = (func())(nil)
+	r.Cmd.Add(cmd)
 
 	const channel = 1234567890
 
-	line := testPfx.Value + c.Name
+	line := testPfx.Value + cmd.Name
 
 	_, err := r.Trigger(testPfx, discord.Message{
 		ChannelID: channel,

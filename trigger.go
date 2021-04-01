@@ -44,14 +44,11 @@ type Trigger struct {
 
 // Trigger gets a Trigger by finding an appropriate Command for a given prefix, message, and line.
 func (r *Route) Trigger(pfx Prefix, m discord.Message, line string) (*Trigger, error) {
+	//nolint:exhaustivestruct // this stuff will be filled
 	t := &Trigger{
 		Route:   r,
 		Message: m,
 		Prefix:  pfx,
-		Command: Cmd{},
-		FlagSet: nil,
-		Args:    nil,
-		Flags:   nil,
 		Output:  &strings.Builder{},
 	}
 
@@ -62,7 +59,7 @@ func (r *Route) Trigger(pfx Prefix, m discord.Message, line string) (*Trigger, e
 
 	name, args := split(line)
 
-	cmd, ok := r.GetCmd(name)
+	cmd, ok := r.Cmd.Get(name)
 	if !ok {
 		return nil, ErrCmdNotFound
 	}
@@ -104,6 +101,10 @@ func (t *Trigger) fillFlagSet() (reflect.Value, error) {
 func (t *Trigger) Usage() {
 	rep := t.Reply()
 	rep.Content = t.Output.String()
+
+	//nolint:exhaustivestruct
+	// discord types are excessive
+	// Fields can be nil for append
 	rep.Embed = &discord.Embed{
 		Title:       fmt.Sprintf("`%s` usage", t.Command.Name),
 		Description: t.Command.Desc,
@@ -133,6 +134,8 @@ type Reply struct {
 // Reply gets a Reply for the Trigger.
 func (t *Trigger) Reply() *Reply {
 	return &Reply{
+		//nolint:exhaustivestruct
+		// discord types are excessive
 		SendMessageData: api.SendMessageData{},
 
 		Trigger: t,
@@ -141,17 +144,19 @@ func (t *Trigger) Reply() *Reply {
 
 // SendMsg sends the Reply.
 func (r *Reply) SendMsg() (*discord.Message, error) {
-	return r.Trigger.Route.State.SendMessageComplex(r.Trigger.Message.ChannelID, r.SendMessageData)
-}
-
-// Send is a shortcut for SendMsg elides the resulting message.
-func (r *Reply) Send() error {
-	_, err := r.SendMsg()
+	msg, err := r.Trigger.Route.State.SendMessageComplex(r.Trigger.Message.ChannelID, r.SendMessageData)
 	if err != nil {
-		return fmt.Errorf("send reply: %w", err)
+		return nil, fmt.Errorf("reply send: %w", err)
 	}
 
-	return nil
+	return msg, nil
+}
+
+// Send is a shortcut for SendMsg that elides the resulting message.
+func (r *Reply) Send() error {
+	_, err := r.SendMsg()
+
+	return err
 }
 
 func split(s string) (string, []string) {

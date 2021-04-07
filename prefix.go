@@ -9,23 +9,24 @@ import (
 	"github.com/superloach/confy"
 )
 
-// GuildIDGlobal is the GuildID used for global configurations.
-const GuildIDGlobal = discord.NullGuildID
+// KeyPrefix is the Confy key used to load/store prefixes.
+const KeyPrefix = "prefix"
+
+// GlobalGuildID is the GuildID used for global configurations.
+const GlobalGuildID = discord.NullGuildID
 
 // PrefixStore describes a concurrent-safe store of Guild-specific command prefixes.
 type PrefixStore struct {
-	Confy *confy.Confy
-	Key   string
+	Confy confy.Confy
 
 	ma map[discord.GuildID]string
 	mu sync.RWMutex
 }
 
 // OpenPrefixStore creates a usable PrefixStore and calls Load.
-func OpenPrefixStore(c *confy.Confy, key string) (*PrefixStore, error) {
+func OpenPrefixStore(c confy.Confy) (*PrefixStore, error) {
 	pfxs := &PrefixStore{
 		Confy: c,
-		Key:   key,
 
 		ma: map[discord.GuildID]string{},
 		mu: sync.RWMutex{},
@@ -41,11 +42,11 @@ func OpenPrefixStore(c *confy.Confy, key string) (*PrefixStore, error) {
 // Load updates the PrefixStore with data from the Confy.
 func (p *PrefixStore) Load() error {
 	p.mu.Lock()
-	err := p.Confy.Load(p.Key, &p.ma)
+	err := p.Confy.Get(KeyPrefix, &p.ma)
 	p.mu.Unlock()
 
 	if err != nil {
-		return fmt.Errorf("confy load %q: %w", p.Key, err)
+		return fmt.Errorf("confy load %q: %w", KeyPrefix, err)
 	}
 
 	return nil
@@ -54,11 +55,11 @@ func (p *PrefixStore) Load() error {
 // Store updates the Confy with data from the PrefixStore.
 func (p *PrefixStore) Store() error {
 	p.mu.RLock()
-	err := p.Confy.Store(p.Key, p.ma)
+	err := p.Confy.Set(KeyPrefix, p.ma)
 	p.mu.RUnlock()
 
 	if err != nil {
-		return fmt.Errorf("confy store %q: %w", p.Key, err)
+		return fmt.Errorf("confy store %q: %w", KeyPrefix, err)
 	}
 
 	return nil
@@ -93,8 +94,8 @@ type Prefix struct {
 	Clean string
 }
 
-// LinePrefix finds the first suitable prefix that matches the given line.
-func (r *Route) LinePrefix(
+// ForLine finds the first suitable prefix that matches the given line.
+func (p *PrefixStore) ForLine(
 	g discord.GuildID,
 	me discord.User,
 	mme *discord.Member,
@@ -103,10 +104,10 @@ func (r *Route) LinePrefix(
 	line = strings.TrimSpace(line)
 
 	// guild prefix
-	pfxv, ok := r.Prefix.Get(g)
+	pfxv, ok := p.Get(g)
 	if !ok {
 		// fallback to default prefix
-		pfxv, ok = r.Prefix.Get(GuildIDGlobal)
+		pfxv, ok = p.Get(GlobalGuildID)
 	}
 
 	if ok && strings.HasPrefix(line, pfxv) {

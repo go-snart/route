@@ -41,6 +41,10 @@ github.com/superloach/confy v0.6.0 h1:Ml3Ksbs1XioLq/T7RWkiKgztCasA9mJafl6DQheGRE
 github.com/superloach/confy v0.6.0/go.mod h1:+FeTNE9LuTPagSr+dU6rkR1lOmzUz/YzFcbuVw4Wwek=
 github.com/superloach/confy v0.6.1 h1:ym57Newn0OoNcWF3VEVdNsQHLuvMIL/oIb0x5TxBYs8=
 github.com/superloach/confy v0.6.1/go.mod h1:+FeTNE9LuTPagSr+dU6rkR1lOmzUz/YzFcbuVw4Wwek=
+github.com/superloach/confy v0.7.0 h1:SqjVvAE958qAIXjc9xg+OVk14l2w0+JfOzi+DhZdt5U=
+github.com/superloach/confy v0.7.0/go.mod h1:SbabAU9JW9MZk7nyEkezoSCl31gyTxkJ6CBYNK8+8zk=
+github.com/superloach/confy v0.7.1 h1:c7fArJhATVYeg8G/6qy0hZvSbzSivpo2WnXaXUcjFUg=
+github.com/superloach/confy v0.7.1/go.mod h1:SbabAU9JW9MZk7nyEkezoSCl31gyTxkJ6CBYNK8+8zk=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=

@@ -50,13 +50,10 @@ func testFunc(run *string) route.Func {
 	}
 }
 
-func testConfy() *confy.Confy {
-	c := confy.New(
-		confy.NewDataMem(),
-		confy.FormJSON{},
-	)
+func testConfy() confy.Confy {
+	c := confy.NewMem()
 
-	err := c.Store(route.KeyPrefix, map[discord.GuildID]string{
+	err := c.Set(route.KeyPrefix, map[discord.GuildID]string{
 		discord.NullGuildID: testPfx.Value,
 	})
 	if err != nil {
@@ -67,7 +64,7 @@ func testConfy() *confy.Confy {
 	return c
 }
 
-func testRoute(t *testing.T, s *state.State, c *confy.Confy) *route.Route {
+func testRoute(t *testing.T, s *state.State, c confy.Confy) *route.Route {
 	t.Helper()
 
 	r, err := route.New(s, c)

@@ -10,7 +10,7 @@ import (
 	"github.com/go-snart/route"
 )
 
-func TestLinePrefixGuild(t *testing.T) {
+func TestForLineGuild(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -23,7 +23,7 @@ func TestLinePrefixGuild(t *testing.T) {
 
 	r.Prefix.Set(guild, pfxv)
 
-	pfx, _ := r.LinePrefix(guild, testMe, nil, pfxv)
+	pfx, _ := r.Prefix.ForLine(guild, testMe, nil, pfxv)
 	expect := route.Prefix{
 		Value: pfxv,
 		Clean: pfxv,
@@ -34,7 +34,7 @@ func TestLinePrefixGuild(t *testing.T) {
 	}
 }
 
-func TestLinePrefixNull(t *testing.T) {
+func TestForLineNull(t *testing.T) {
 	t.Parallel()
 
 	const pfxv = "test!"
@@ -46,7 +46,7 @@ func TestLinePrefixNull(t *testing.T) {
 
 	r.Prefix.Set(guild, "test!")
 
-	pfx, _ := r.LinePrefix(guild, testMe, nil, "test!uwu")
+	pfx, _ := r.Prefix.ForLine(guild, testMe, nil, "test!uwu")
 	expect := route.Prefix{
 		Value: pfxv,
 		Clean: pfxv,
@@ -57,14 +57,14 @@ func TestLinePrefixNull(t *testing.T) {
 	}
 }
 
-func TestLinePrefixUser(t *testing.T) {
+func TestForLineUser(t *testing.T) {
 	t.Parallel()
 
 	m, s := dismock.NewState(t)
 	c := testConfy()
 	r := testRoute(t, s, c)
 
-	pfx, _ := r.LinePrefix(discord.NullGuildID, testMe, nil, testMe.Mention())
+	pfx, _ := r.Prefix.ForLine(discord.NullGuildID, testMe, nil, testMe.Mention())
 	expect := route.Prefix{
 		Value: testMe.Mention(),
 		Clean: "@" + testMe.Username + " ",
@@ -77,7 +77,7 @@ func TestLinePrefixUser(t *testing.T) {
 	m.Eval()
 }
 
-func TestLinePrefixMemberNick(t *testing.T) {
+func TestForLineMemberNick(t *testing.T) {
 	t.Parallel()
 
 	m, s := dismock.NewState(t)
@@ -86,7 +86,7 @@ func TestLinePrefixMemberNick(t *testing.T) {
 
 	const guild = 666
 
-	pfx, _ := r.LinePrefix(guild, testMe, &testMMeNick, testMMeNick.Mention())
+	pfx, _ := r.Prefix.ForLine(guild, testMe, &testMMeNick, testMMeNick.Mention())
 	expect := route.Prefix{
 		Value: testMMeNick.Mention(),
 		Clean: "@" + testMMeNick.Nick + " ",
@@ -99,7 +99,7 @@ func TestLinePrefixMemberNick(t *testing.T) {
 	m.Eval()
 }
 
-func TestLinePrefixNil(t *testing.T) {
+func TestForLineNil(t *testing.T) {
 	t.Parallel()
 
 	m, s := dismock.NewState(t)
@@ -108,7 +108,7 @@ func TestLinePrefixNil(t *testing.T) {
 
 	const guild = 666
 
-	pfx, ok := r.LinePrefix(guild, testMe, nil, "")
+	pfx, ok := r.Prefix.ForLine(guild, testMe, nil, "")
 	if ok {
 		t.Errorf("should be !ok, got %#v", pfx)
 	}

@@ -19,20 +19,15 @@ var ErrNoLinePrefix = errors.New("no prefix in line")
 // Route handles storing and looking up Cmds.
 type Route struct {
 	State *state.State
-	Confy *confy.Confy
+	Confy confy.Confy
 
 	Prefix *PrefixStore
 	Cmd    *CmdStore
 }
 
-const (
-	// KeyPrefix is the Confy key used to load/store prefixes.
-	KeyPrefix = "prefix"
-)
-
 // New makes an empty Route with the given State.
-func New(s *state.State, c *confy.Confy) (*Route, error) {
-	pfxs, err := OpenPrefixStore(c, "prefix")
+func New(s *state.State, c confy.Confy) (*Route, error) {
+	pfxs, err := OpenPrefixStore(c)
 	if err != nil {
 		return nil, fmt.Errorf("confy load %q: %w", KeyPrefix, err)
 	}
@@ -76,7 +71,7 @@ func (r *Route) Handle(m *gateway.MessageCreateEvent) {
 }
 
 func (r *Route) handleLine(m *gateway.MessageCreateEvent, line string, me discord.User, mme *discord.Member) error {
-	pfx, ok := r.LinePrefix(m.GuildID, me, mme, line)
+	pfx, ok := r.Prefix.ForLine(m.GuildID, me, mme, line)
 	if !ok {
 		return ErrNoLinePrefix
 	}
